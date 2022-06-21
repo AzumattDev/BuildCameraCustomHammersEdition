@@ -33,16 +33,7 @@ Start the game with the plugin installed, then edit the file `\BepInEx\config\Bu
   * Camera_Range_Multiplier
   * Move_With_Respect_To_World
   * Verbose_Logging
-  * Tool_Names
   
-# Adding custom hammers in configuration file
-
-Open the Build Camera.cfg, locate the row `## List of comma-separated tool names that will allow Build Camera`
-<br>
-Add your custom hammer prefab at the end of `Tool_Names` after the prefilled ones.
-<br> 
-Example: `Tool_Names = prefilledprefabs, yourcustomhammerprefab`
-
 # Incompatible with
 
   * Valheim Plus first person mode. Sorry, I'm not sure how to make these compatible, both mods are taking over the camera.
@@ -56,6 +47,8 @@ This mod only needs to be installed on your client, not the server, and other cl
 
 # Changelog
 
+ * Version 1.6.3
+    * Added automatic detection of tool (Thanks MSchmoecker!!)
  * Version 1.6.2
     * Added support for custom hammers.
  * Version 1.6.1
