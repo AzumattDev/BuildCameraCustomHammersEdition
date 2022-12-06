@@ -1,6 +1,8 @@
-// You can find me @CookieMilk at [ODIN Plus Team Discord](https://discord.com/invite/KKHujtRGvB) //
 
-Fork from [Build Camera](https://github.com/gittywithexcitement/ValheimBuildCamera)
+`This mod uses a file watcher. If the configuration file is not changed with BepInEx Configuration manager, but changed in the file directly on the server, upon file save, it will sync the changes to all clients.`
+
+
+Fork from [Build Camera](https://github.com/gittywithexcitement/ValheimBuildCamera) (CookieMilk's version specifically)
 
 # Usage
 
@@ -20,19 +22,19 @@ Fork from [Build Camera](https://github.com/gittywithexcitement/ValheimBuildCame
 # Installation
 
 1. Install [BepInEx for Valheim](https://valheim.thunderstore.io/package/denikson/BepInExPack_Valheim/)
-2. Place `Build Camera.dll` in your BepInEx plugins directory, like this: `Steam\steamapps\common\Valheim\BepInEx\plugins\Build Camera.dll`.
+2. Place `Build Camera.dll` in your BepInEx plugins directory, like this: `Steam\steamapps\common\Valheim\BepInEx\plugins\BuildCameraCHE.dll`.
 
 # Configuration
 
-Start the game with the plugin installed, then edit the file `\BepInEx\config\Build Camera.cfg`. There are several configurable options:
+Start the game with the plugin installed, then edit the file `\BepInEx\config\Azumatt.BuildCameraCHE.cfg`. There are several configurable options:
 
-  * Distance_Can_Build_From_Avatar
-  * Distance_Can_Build_From_Workbench
-  * Toggle_build_mode hotkey
-  * Camera_Move_Speed_Multiplier
-  * Camera_Range_Multiplier
-  * Move_With_Respect_To_World
-  * Verbose_Logging
+  * Distance Can Build From Avatar
+  * Distance Can Build From Workbench
+  * Toggle build mode hotkey
+  * Camera Move Speed Multiplier
+  * Camera Range Multiplier
+  * Move With Respect To World
+  * Verbose Logging
   
 # Incompatible with
 
@@ -46,6 +48,19 @@ I've been told Build Camera is compatible with with kailen37's FirstPerson mod o
 This mod only needs to be installed on your client, not the server, and other clients do not have to install it (unless they want it too).
 
 # Changelog
+
+<details><summary>Current Mod Changelogs</summary>
+
+* 1.0.0
+
+  * Initial release
+    * Forked from CookieMilk's version of Build Camera
+    * Updated to add FileWatcher to the code for live direct file changes.
+
+</details>
+
+
+<details><summary>Original Mod Changelogs</summary>
 
  * Version 1.6.3
     * Added automatic detection of tool (Thanks MSchmoecker!!)
@@ -82,16 +97,34 @@ This mod only needs to be installed on your client, not the server, and other cl
  * Version 1.0.0.0
     * Initial release.
 
+</details>
+
 # Source code
 
-Can be found at https://github.com/gittywithexcitement/ValheimBuildCamera.
+Original source can be found at https://github.com/gittywithexcitement/ValheimBuildCamera.
 
-Contributions are welcome:
+Current source can be found at https://github.com/AzumattDev/BuildCameraCustomHammersEdition
 
-   * bug fixes
-   * adding compatibility with another mod
-   * For new features, please contact me first, by opening an issue on github and explaining what you intend.
+Contributions are welcome!
 
 # Acknowledgements
+All previous contributors to the original mod, remakes, or other!
 
-Thanks to the excellent [Build Helper mod](https://www.nexusmods.com/valheim/mods/53) for showing me how to change "distance can build from avatar" and "distance can build from workbench".
+
+### Current Mod Maintainer
+
+---
+
+
+`Feel free to reach out to me on discord if you need manual download assistance.`
+
+### Azumatt
+
+`DISCORD:` Azumatt#2625
+
+`STEAM:` https://steamcommunity.com/id/azumatt/
+
+For Questions or Comments, find me in the Odin Plus Team Discord or in mine:
+
+[![https://i.imgur.com/XXP6HCU.png](https://i.imgur.com/XXP6HCU.png)](https://discord.gg/Pb6bVMnFb2)
+<a href="https://discord.gg/pdHgy6Bsng"><img src="https://i.imgur.com/Xlcbmm9.png" href="https://discord.gg/pdHgy6Bsng" width="175" height="175"></a>

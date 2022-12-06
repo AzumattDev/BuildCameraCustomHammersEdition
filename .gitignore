@@ -1,4 +1,8 @@
-/obj/
-/bin/
-/.vs/
-/references/
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+.idea/
+.vs/
+BuildCameraCHE.sln.DotSettings.user

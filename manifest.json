@@ -1,8 +1,0 @@
-{
-    "name": "Build_Camera_Custom_Hammers_Edition",
-    "version_number": "1.6.7",
-    "website_url": "https://github.com/CookiexMilk/BuildCameraCustomHammersEdition",
-    "description": "Adds a build camera to your vanilla and custom hammers.",
-    "dependencies": [
-    ]
-}
