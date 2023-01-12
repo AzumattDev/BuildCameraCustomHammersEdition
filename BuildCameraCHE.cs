@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.1.1";
+    internal const string ModVersion = "1.1.2";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);

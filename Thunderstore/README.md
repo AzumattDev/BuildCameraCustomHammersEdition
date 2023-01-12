@@ -51,12 +51,13 @@ I've been told Build Camera is compatible with with kailen37's FirstPerson mod o
 
 <details><summary>Current Mod Changelogs</summary>
 
-* 1.1.0 / 1.1.1
+* 1.1.0 / 1.1.1 / 1.1.2
 
    * Add ServerSync to the mod
       * This is meant to prevent exploiting. The mod will now version check with itself and the server. If the server is not running the same version as the client, the client will not be able to connect to the server.
         * This doesn't prevent you from using the mod on only the client 
    * Update README in v1.1.1
+   * Fix a fuckup in v1.1.2. Forgot to change the csjproj file to reflect having ServerSync
 
 * 1.0.0
 

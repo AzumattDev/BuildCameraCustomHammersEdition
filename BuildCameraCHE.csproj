@@ -117,7 +117,7 @@
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 
-    <Target Name="GetAssemblyVersion" AfterTargets="AfterBuild">
+    <Target Name="GetAssemblyVersion" AfterTargets="ILRepacker">
         <GetAssemblyIdentity AssemblyFiles="$(TargetPath)">
             <Output TaskParameter="Assemblies" ItemName="Targets" />
         </GetAssemblyIdentity>
