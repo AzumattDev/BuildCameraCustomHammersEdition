@@ -1,10 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
 using System.IO;
 using System.Reflection;
 using BepInEx.Logging;
+using JetBrains.Annotations;
+using ServerSync;
 using UnityEngine;
 
 // Possible TODOS:
@@ -23,16 +26,20 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.0.0";
+    internal const string ModVersion = "1.1.0";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
     private const string VERSION = "1.0.0";
     private static string ConfigFileName = ModGUID + ".cfg";
     private static string ConfigFileFullPath = Paths.ConfigPath + Path.DirectorySeparatorChar + ConfigFileName;
+    internal static string ConnectionError = "";
 
     public static readonly ManualLogSource BuildCameraCHELogger =
         BepInEx.Logging.Logger.CreateLogSource(ModName);
+    
+    private static readonly ConfigSync ConfigSync = new(ModGUID)
+        { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
 
     // This is how we "add" member variables to a class of the game.
     internal static Dictionary<Player, bool> inBuildMode = new();
@@ -78,41 +85,45 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
     void Awake()
     {
-        distanceCanBuildFromAvatar = Config.Bind("General", "Distance Can Build From Avatar", 100f,
+        _serverConfigLocked = config("1 - General", "Lock Configuration", Toggle.On,
+            "If on, the configuration is locked and can be changed by server admins only.");
+        _ = ConfigSync.AddLockingConfigEntry(_serverConfigLocked);
+        
+        distanceCanBuildFromAvatar = config("General", "Distance Can Build From Avatar", 100f,
             "Distance from your avatar that you can build or repair. (Valheim default is 8)");
 
         distanceCanBuildFromWorkbench
-            = Config.Bind("General", "Distance Can Build From Workbench", 100f,
+            = config("General", "Distance Can Build From Workbench", 100f,
                 "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
 
         cameraRangeMultiplier
-            = Config.Bind("General", "Camera Range Multiplier", 1f,
+            = config("General", "Camera Range Multiplier", 1f,
                 "Changes maximum range camera can move away from the build station. 1 means the build station's" +
                 " range, 2 means twice the build station range, etc.");
 
         cameraMoveSpeedMultiplier
-            = Config.Bind("General", "Camera Move Speed Multiplier", 3f,
+            = config("General", "Camera Move Speed Multiplier", 3f,
                 "Multiplies the speed at which the build camera pans (i.e. moves around).");
 
         moveWithRespectToWorld
-            = Config.Bind("General", "Move With Respect To World", Toggle.On,
+            = config("General", "Move With Respect To World", Toggle.On,
                 "When true, camera panning input (e.g. pressing WASD) moves the camera with respect to the " +
                 "world coordinates. This means that turning the camera has no effect on the direction of " +
                 "movement. For example, pressing W will always move the camera toward the world's 'North', " +
                 "as opposed to the direction the camera is currently facing.");
 
         toggleBuildMode =
-            Config.Bind("Hotkeys", "Toggle build mode", new KeyboardShortcut(KeyCode.B),
+            config("Hotkeys", "Toggle build mode", new KeyboardShortcut(KeyCode.B),
                 "See https://docs.unity3d.com/ScriptReference/KeyCode.html for the names of all key codes. To " +
-                "add one or more modifier keys, separate them with +, like so: Toggle build mode = B + LeftControl");
+                "add one or more modifier keys, separate them with +, like so: Toggle build mode = B + LeftControl",
+                false);
 
-        verboseLogging = Config.Bind("General", "Verbose Logging", Toggle.Off,
+        verboseLogging = config("General", "Verbose Logging", Toggle.Off,
             "When true, increases verbosity of logging. Enable this if you're wondering why you're unable " +
-            "to enable the Build Camera.");
+            "to enable the Build Camera.",false);
 
 
-        BuildCameraCHELogger.LogInfo(
-            "Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
+        BuildCameraCHELogger.LogInfo("Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
 
         Assembly assembly = Assembly.GetExecutingAssembly();
         _harmony.PatchAll(assembly);
@@ -151,7 +162,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     }
 
     #region ConfigOptions
-
+    private static ConfigEntry<Toggle> _serverConfigLocked = null!;
     internal static ConfigEntry<float> distanceCanBuildFromAvatar;
     internal static ConfigEntry<float> distanceCanBuildFromWorkbench;
     internal static ConfigEntry<float> cameraRangeMultiplier;
@@ -159,6 +170,50 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     internal static ConfigEntry<Toggle> moveWithRespectToWorld;
     internal static ConfigEntry<KeyboardShortcut> toggleBuildMode;
     internal static ConfigEntry<Toggle> verboseLogging;
+    
+    private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description,
+        bool synchronizedSetting = true)
+    {
+        ConfigDescription extendedDescription =
+            new(
+                description.Description +
+                (synchronizedSetting ? " [Synced with Server]" : " [Not Synced with Server]"),
+                description.AcceptableValues, description.Tags);
+        ConfigEntry<T> configEntry = Config.Bind(group, name, value, extendedDescription);
+        //var configEntry = Config.Bind(group, name, value, description);
+
+        SyncedConfigEntry<T> syncedConfigEntry = ConfigSync.AddConfigEntry(configEntry);
+        syncedConfigEntry.SynchronizedConfig = synchronizedSetting;
+
+        return configEntry;
+    }
+
+    private ConfigEntry<T> config<T>(string group, string name, T value, string description,
+        bool synchronizedSetting = true)
+    {
+        return config(group, name, value, new ConfigDescription(description), synchronizedSetting);
+    }
+
+    private class ConfigurationManagerAttributes
+    {
+        [UsedImplicitly] public int? Order;
+        [UsedImplicitly] public bool? Browsable;
+        [UsedImplicitly] public string? Category;
+        [UsedImplicitly] public Action<ConfigEntryBase>? CustomDrawer;
+    }
+
+    class AcceptableShortcuts : AcceptableValueBase // Used for KeyboardShortcut Configs 
+    {
+        public AcceptableShortcuts() : base(typeof(KeyboardShortcut))
+        {
+        }
+
+        public override object Clamp(object value) => value;
+        public override bool IsValid(object value) => true;
+
+        public override string ToDescriptionString() =>
+            "# Acceptable values: " + string.Join(", ", KeyboardShortcut.AllKeyCodes);
+    }
 
     #endregion
 }

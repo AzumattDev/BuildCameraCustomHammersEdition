@@ -22,7 +22,7 @@ Fork from [Build Camera](https://github.com/gittywithexcitement/ValheimBuildCame
 # Installation
 
 1. Install [BepInEx for Valheim](https://valheim.thunderstore.io/package/denikson/BepInExPack_Valheim/)
-2. Place `Build Camera.dll` in your BepInEx plugins directory, like this: `Steam\steamapps\common\Valheim\BepInEx\plugins\BuildCameraCHE.dll`.
+2. Place `BuildCameraCHE.dll` in your BepInEx plugins directory, like this: `Steam\steamapps\common\Valheim\BepInEx\plugins\BuildCameraCHE.dll`.
 
 # Configuration
 
@@ -50,6 +50,12 @@ This mod only needs to be installed on your client, not the server, and other cl
 # Changelog
 
 <details><summary>Current Mod Changelogs</summary>
+
+* 1.1.0
+
+   * Add ServerSync to the mod
+      * This is meant to prevent exploiting. The mod will now version check with itself and the server. If the server is not running the same version as the client, the client will not be able to connect to the server.
+        * This doesn't prevent you from using the mod on only the client 
 
 * 1.0.0
 
