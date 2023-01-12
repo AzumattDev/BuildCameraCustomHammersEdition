@@ -1,4 +1,8 @@
 
+`Version checks with itself. If installed on the server, it will kick clients who do not have it installed.`
+
+`This mod uses ServerSync, if installed on the server and all clients, it will sync all configs to client`
+
 `This mod uses a file watcher. If the configuration file is not changed with BepInEx Configuration manager, but changed in the file directly on the server, upon file save, it will sync the changes to all clients.`
 
 
@@ -43,19 +47,16 @@ Start the game with the plugin installed, then edit the file `\BepInEx\config\Az
 
 I've been told Build Camera is compatible with with kailen37's FirstPerson mod on nexusmods.com.
 
-# Miscellaneous
-
-This mod only needs to be installed on your client, not the server, and other clients do not have to install it (unless they want it too).
-
 # Changelog
 
 <details><summary>Current Mod Changelogs</summary>
 
-* 1.1.0
+* 1.1.0 / 1.1.1
 
    * Add ServerSync to the mod
       * This is meant to prevent exploiting. The mod will now version check with itself and the server. If the server is not running the same version as the client, the client will not be able to connect to the server.
         * This doesn't prevent you from using the mod on only the client 
+   * Update README in v1.1.1
 
 * 1.0.0
 
