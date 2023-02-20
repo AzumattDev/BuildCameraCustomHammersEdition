@@ -51,6 +51,9 @@ I've been told Build Camera is compatible with with kailen37's FirstPerson mod o
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.1.3
+  * Fix the default for Move_With_Respect_To_World to be off, like it was in the original mod.
+
 * 1.1.0 / 1.1.1 / 1.1.2
 
    * Add ServerSync to the mod

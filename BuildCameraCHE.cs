@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.1.2";
+    internal const string ModVersion = "1.1.3";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -106,7 +106,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
                 "Multiplies the speed at which the build camera pans (i.e. moves around).");
 
         moveWithRespectToWorld
-            = config("General", "Move With Respect To World", Toggle.On,
+            = config("General", "Move With Respect To World", Toggle.Off,
                 "When true, camera panning input (e.g. pressing WASD) moves the camera with respect to the " +
                 "world coordinates. This means that turning the camera has no effect on the direction of " +
                 "movement. For example, pressing W will always move the camera toward the world's 'North', " +
@@ -123,7 +123,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
             "to enable the Build Camera.",false);
 
 
-        BuildCameraCHELogger.LogInfo("Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
+        BuildCameraCHELogger.LogMessage("Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
 
         Assembly assembly = Assembly.GetExecutingAssembly();
         _harmony.PatchAll(assembly);
