@@ -1,9 +1,9 @@
 {
     "name": "Build_Camera_Custom_Hammers_Edition",
-    "version_number": "1.1.3",
+    "version_number": "1.2.0",
     "website_url": "https://github.com/AzumattDev/BuildCameraCustomHammersEdition",
     "description": "Adds a build camera to your vanilla and custom hammers. Taken over from the original mod by Azumatt.",
     "dependencies": [
-        "denikson-BepInExPack_Valheim-5.4.1901"
+        "denikson-BepInExPack_Valheim-5.4.2105"
     ]
 }

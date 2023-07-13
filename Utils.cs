@@ -14,7 +14,7 @@ namespace Valheim_Build_Camera
         }
 
         // Returns true when the player has Build Mode activated.
-        internal static bool InBuildMode()
+        public static bool InBuildMode()
         {
             return (bool)Player.m_localPlayer && Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer];
         }

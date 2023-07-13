@@ -199,6 +199,8 @@ namespace Valheim_Build_Camera
     }
 
     [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateCamera))]
+    [HarmonyBefore("Azumatt.FirstPersonMode")]
+    [HarmonyPriority(Priority.VeryHigh)]
     static class GameCamera_UpdateCamera_Patch
     {
         static void Prefix(float dt, ref GameCamera __instance, ref bool __runOriginal)
