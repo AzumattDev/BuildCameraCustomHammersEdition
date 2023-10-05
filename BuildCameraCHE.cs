@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.0";
+    internal const string ModVersion = "1.2.1";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -37,7 +37,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
     public static readonly ManualLogSource BuildCameraCHELogger =
         BepInEx.Logging.Logger.CreateLogSource(ModName);
-    
+
     private static readonly ConfigSync ConfigSync = new(ModGUID)
         { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
 
@@ -88,7 +88,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         _serverConfigLocked = config("1 - General", "Lock Configuration", Toggle.On,
             "If on, the configuration is locked and can be changed by server admins only.");
         _ = ConfigSync.AddLockingConfigEntry(_serverConfigLocked);
-        
+
         distanceCanBuildFromAvatar = config("General", "Distance Can Build From Avatar", 100f,
             "Distance from your avatar that you can build or repair. (Valheim default is 8)");
 
@@ -120,7 +120,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
         verboseLogging = config("General", "Verbose Logging", Toggle.Off,
             "When true, increases verbosity of logging. Enable this if you're wondering why you're unable " +
-            "to enable the Build Camera.",false);
+            "to enable the Build Camera.", false);
 
 
         BuildCameraCHELogger.LogMessage("Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
@@ -162,15 +162,16 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     }
 
     #region ConfigOptions
+
     private static ConfigEntry<Toggle> _serverConfigLocked = null!;
-    internal static ConfigEntry<float> distanceCanBuildFromAvatar;
-    internal static ConfigEntry<float> distanceCanBuildFromWorkbench;
-    internal static ConfigEntry<float> cameraRangeMultiplier;
-    internal static ConfigEntry<float> cameraMoveSpeedMultiplier;
-    internal static ConfigEntry<Toggle> moveWithRespectToWorld;
-    internal static ConfigEntry<KeyboardShortcut> toggleBuildMode;
-    internal static ConfigEntry<Toggle> verboseLogging;
-    
+    internal static ConfigEntry<float> distanceCanBuildFromAvatar = null!;
+    internal static ConfigEntry<float> distanceCanBuildFromWorkbench = null!;
+    internal static ConfigEntry<float> cameraRangeMultiplier = null!;
+    internal static ConfigEntry<float> cameraMoveSpeedMultiplier = null!;
+    internal static ConfigEntry<Toggle> moveWithRespectToWorld = null!;
+    internal static ConfigEntry<KeyboardShortcut> toggleBuildMode = null!;
+    internal static ConfigEntry<Toggle> verboseLogging = null!;
+
     private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description,
         bool synchronizedSetting = true)
     {
@@ -196,13 +197,13 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
     private class ConfigurationManagerAttributes
     {
-        [UsedImplicitly] public int? Order;
-        [UsedImplicitly] public bool? Browsable;
-        [UsedImplicitly] public string? Category;
-        [UsedImplicitly] public Action<ConfigEntryBase>? CustomDrawer;
+        [UsedImplicitly] public int? Order = null!;
+        [UsedImplicitly] public bool? Browsable = null!;
+        [UsedImplicitly] public string? Category = null!;
+        [UsedImplicitly] public Action<ConfigEntryBase>? CustomDrawer = null!;
     }
 
-    class AcceptableShortcuts : AcceptableValueBase // Used for KeyboardShortcut Configs 
+    class AcceptableShortcuts : AcceptableValueBase
     {
         public AcceptableShortcuts() : base(typeof(KeyboardShortcut))
         {
@@ -212,7 +213,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         public override bool IsValid(object value) => true;
 
         public override string ToDescriptionString() =>
-            "# Acceptable values: " + string.Join(", ", KeyboardShortcut.AllKeyCodes);
+            "# Acceptable values: " + string.Join(", ", UnityInput.Current.SupportedKeyCodes);
     }
 
     #endregion

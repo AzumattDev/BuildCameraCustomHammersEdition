@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.1
+  * Update for Valheim 0.217.22 
 * 1.2.0
     * Fix compatibility with my [FirstPersonMode](https://valheim.thunderstore.io/package/Azumatt/FirstPersonMode/) mod
 * 1.1.3
