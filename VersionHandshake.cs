@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using HarmonyLib;
-using Valheim_Build_Camera;
 
-namespace AllTheBases;
+namespace Valheim_Build_Camera;
 
 [HarmonyPatch(typeof(ZNet), nameof(ZNet.OnNewConnection))]
 public static class RegisterAndCheckVersion

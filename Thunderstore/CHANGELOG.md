@@ -2,8 +2,12 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.2
+    * Fix some oversights on my part. Version wasn't updated to use the new variable.
+    * Update ServerSync internally, it had optimizations and bug fixes this time around.
+    * Code Project Updates: Made it easier to build and change the project pathing
 * 1.2.1
-  * Update for Valheim 0.217.22 
+    * Update for Valheim 0.217.22
 * 1.2.0
     * Fix compatibility with my [FirstPersonMode](https://valheim.thunderstore.io/package/Azumatt/FirstPersonMode/) mod
 * 1.1.3

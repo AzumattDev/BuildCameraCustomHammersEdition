@@ -22,24 +22,20 @@ using UnityEngine;
 
 namespace Valheim_Build_Camera;
 
-[BepInPlugin(ModGUID, ModName, VERSION)]
+[BepInPlugin(ModGUID, ModName, ModVersion)]
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.1";
+    internal const string ModVersion = "1.2.2";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
-    private const string VERSION = "1.0.0";
     private static string ConfigFileName = ModGUID + ".cfg";
     private static string ConfigFileFullPath = Paths.ConfigPath + Path.DirectorySeparatorChar + ConfigFileName;
     internal static string ConnectionError = "";
+    public static readonly ManualLogSource BuildCameraCHELogger = BepInEx.Logging.Logger.CreateLogSource(ModName);
 
-    public static readonly ManualLogSource BuildCameraCHELogger =
-        BepInEx.Logging.Logger.CreateLogSource(ModName);
-
-    private static readonly ConfigSync ConfigSync = new(ModGUID)
-        { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
+    private static readonly ConfigSync ConfigSync = new(ModGUID) { DisplayName = ModName, CurrentVersion = ModVersion, MinimumRequiredVersion = ModVersion };
 
     // This is how we "add" member variables to a class of the game.
     internal static Dictionary<Player, bool> inBuildMode = new();

@@ -1,6 +1,6 @@
 {
     "name": "Build_Camera_Custom_Hammers_Edition",
-    "version_number": "1.2.0",
+    "version_number": "1.2.2",
     "website_url": "https://github.com/AzumattDev/BuildCameraCustomHammersEdition",
     "description": "Adds a build camera to your vanilla and custom hammers. Taken over from the original mod by Azumatt.",
     "dependencies": [
