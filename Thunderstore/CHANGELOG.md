@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.3
+  * Quick recompile for Ashlands, just in case. 
 * 1.2.2
     * Fix some oversights on my part. Version wasn't updated to use the new variable.
     * Update ServerSync internally, it had optimizations and bug fixes this time around.
