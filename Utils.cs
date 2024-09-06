@@ -92,21 +92,19 @@ namespace Valheim_Build_Camera
             {
                 return null;
             }
-            else
-            {
-                List<Valheim_Build_CameraPlugin.NearbyCraftingStation> nearbyCraftingStations = new();
-                foreach (CraftingStation station in CraftingStation.m_allStations)
-                {
-                    nearbyCraftingStations.Add(new Valheim_Build_CameraPlugin.NearbyCraftingStation
-                    {
-                        position = station.transform.position,
-                        distance = Vector3.Distance(station.transform.position, playerOrCamera),
-                        rangeBuild = station.m_rangeBuild
-                    });
-                }
 
-                return nearbyCraftingStations.OrderBy(x => x.distance).First();
+            List<Valheim_Build_CameraPlugin.NearbyCraftingStation> nearbyCraftingStations = new();
+            foreach (CraftingStation station in CraftingStation.m_allStations)
+            {
+                nearbyCraftingStations.Add(new Valheim_Build_CameraPlugin.NearbyCraftingStation
+                {
+                    position = station.transform.position,
+                    distance = Vector3.Distance(station.transform.position, playerOrCamera),
+                    rangeBuild = station.m_rangeBuild
+                });
             }
+
+            return nearbyCraftingStations.OrderBy(x => x.distance).First();
         }
 
         /// <summary>
@@ -127,10 +125,8 @@ namespace Valheim_Build_Camera
             {
                 return nearbyCraftingStation.distance <= nearbyCraftingStation.rangeBuild;
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
         /// <summary>
@@ -143,12 +139,9 @@ namespace Valheim_Build_Camera
             var maybeStation = GetNearestBuildStation(__instance.transform.position);
             if (maybeStation is Valheim_Build_CameraPlugin.NearbyCraftingStation nearbyCraftingStation)
             {
-                if (nearbyCraftingStation.distance
-                    > nearbyCraftingStation.rangeBuild * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value)
+                if (nearbyCraftingStation.distance > nearbyCraftingStation.rangeBuild * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value)
                 {
-                    float error = nearbyCraftingStation.distance
-                                  - nearbyCraftingStation.rangeBuild *
-                                  Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value;
+                    float error = nearbyCraftingStation.distance - nearbyCraftingStation.rangeBuild * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value;
                     Vector3 towardStation = nearbyCraftingStation.position - __instance.transform.position;
                     Vector3 correction = error * towardStation.normalized;
                     __instance.transform.position = __instance.transform.position + correction;
@@ -278,16 +271,57 @@ namespace Valheim_Build_Camera
             if (!Console.IsVisible() && Player.m_localPlayer.TakeInput() && !Hud.IsPieceSelectionVisible())
             {
                 var untransformed = UntransformedMovementVector(dt);
-                Vector3 moveBy = Valheim_Build_CameraPlugin.moveWithRespectToWorld.Value ==
-                                 Valheim_Build_CameraPlugin.Toggle.On
-                    ? untransformed
-                    : __instance.transform.TransformVector(untransformed);
+                Vector3 moveBy = Valheim_Build_CameraPlugin.moveWithRespectToWorld.Value == Valheim_Build_CameraPlugin.Toggle.On ? untransformed : __instance.transform.TransformVector(untransformed);
 
                 __instance.transform.position += moveBy;
                 StayNearWorkbench(ref __instance);
                 StayAboveGround(ref __instance);
 
                 __instance.transform.rotation = UpdateBuildCameraViewDirection(dt);
+            }
+        }
+
+        public static void AutoPickup(float dt, ref GameCamera __instance)
+        {
+            if (Player.m_localPlayer.IsTeleporting() || !Player.m_enableAutoPickup || Player.m_localPlayer == null)
+                return;
+            Vector3 b = __instance.transform.position + Vector3.up;
+            foreach (Collider collider in Physics.OverlapSphere(b, Valheim_Build_CameraPlugin.resourcePickupRange.Value, Player.m_localPlayer.m_autoPickupMask))
+            {
+                if ((bool)(Object)collider.attachedRigidbody)
+                {
+                    ItemDrop component = collider.attachedRigidbody.GetComponent<ItemDrop>();
+                    FloatingTerrainDummy floatingTerrainDummy = null;
+                    if (component == null && (bool)(Object)(floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && (bool)(Object)floatingTerrainDummy)
+                        component = floatingTerrainDummy.m_parent.gameObject.GetComponent<ItemDrop>();
+                    if (!((Object)component == null) && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
+                    {
+                        if (!component.CanPickup())
+                            component.RequestOwn();
+                        else if (!component.InTar())
+                        {
+                            component.Load();
+                            if (Player.m_localPlayer.m_inventory.CanAddItem(component.m_itemData) && component.m_itemData.GetWeight() + (double)Player.m_localPlayer.m_inventory.GetTotalWeight() <= (double)Player.m_localPlayer.GetMaxCarryWeight())
+                            {
+                                float num = Vector3.Distance(component.transform.position, b);
+                                if (num <= (double)Valheim_Build_CameraPlugin.resourcePickupRange.Value)
+                                {
+                                    if (num < Valheim_Build_CameraPlugin.resourcePickupRange.Value)
+                                    {
+                                        Player.m_localPlayer.Pickup(component.gameObject);
+                                    }
+                                    else
+                                    {
+                                        Vector3 vector3 = Vector3.Normalize(b - component.transform.position) * 15f * dt;
+                                        component.transform.position += vector3;
+                                        if ((bool)(Object)floatingTerrainDummy)
+                                            floatingTerrainDummy.transform.position += vector3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

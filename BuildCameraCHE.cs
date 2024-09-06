@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.3";
+    internal const string ModVersion = "1.2.4";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -91,6 +91,10 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         distanceCanBuildFromWorkbench
             = config("General", "Distance Can Build From Workbench", 100f,
                 "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
+        
+        resourcePickupRange
+            = config("General", "Resource Pickup Range", 10f,
+                "Distance from which you can pick up resources on the ground while in build mode. (Valheim default is 2)");
 
         cameraRangeMultiplier
             = config("General", "Camera Range Multiplier", 1f,
@@ -162,6 +166,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     private static ConfigEntry<Toggle> _serverConfigLocked = null!;
     internal static ConfigEntry<float> distanceCanBuildFromAvatar = null!;
     internal static ConfigEntry<float> distanceCanBuildFromWorkbench = null!;
+    internal static ConfigEntry<float> resourcePickupRange = null!;
     internal static ConfigEntry<float> cameraRangeMultiplier = null!;
     internal static ConfigEntry<float> cameraMoveSpeedMultiplier = null!;
     internal static ConfigEntry<Toggle> moveWithRespectToWorld = null!;

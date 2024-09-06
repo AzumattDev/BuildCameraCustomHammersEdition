@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.4
+  * Camera can now pick up items on the ground to the player's inventory. 
 * 1.2.3
   * Quick recompile for Ashlands, just in case. 
 * 1.2.2

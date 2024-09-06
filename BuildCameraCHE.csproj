@@ -108,6 +108,9 @@
         <Reference Include="UnityEngine.TextRenderingModule">
             <HintPath>$(CorlibPath)\UnityEngine.TextRenderingModule.dll</HintPath>
         </Reference>
+        <Reference Include="UnityEngine.PhysicsModule">
+            <HintPath>$(CorlibPath)\UnityEngine.PhysicsModule.dll</HintPath>
+        </Reference>
         <Reference Include="UnityEngine.UI">
             <HintPath>$(CorlibPath)\UnityEngine.UI.dll</HintPath>
         </Reference>

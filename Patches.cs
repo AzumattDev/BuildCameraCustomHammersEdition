@@ -208,7 +208,7 @@ namespace Valheim_Build_Camera
             if (Utils.InBuildMode())
             {
                 Utils.UpdateBuildCamera(dt, ref __instance);
-
+                Utils.AutoPickup(dt, ref __instance);
                 __runOriginal = false;
             }
             else
