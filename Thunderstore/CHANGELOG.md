@@ -2,10 +2,15 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.6
+    * Add some ward checks to the pickup options.
+    * Some additional input checks
+* 1.2.5
+    * Update for Bog Witch
 * 1.2.4
-  * Camera can now pick up items on the ground to the player's inventory. 
+    * Camera can now pick up items on the ground to the player's inventory.
 * 1.2.3
-  * Quick recompile for Ashlands, just in case. 
+    * Quick recompile for Ashlands, just in case.
 * 1.2.2
     * Fix some oversights on my part. Version wasn't updated to use the new variable.
     * Update ServerSync internally, it had optimizations and bug fixes this time around.

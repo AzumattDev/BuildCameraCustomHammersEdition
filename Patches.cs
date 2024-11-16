@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using UnityEngine;
+using Valheim_Build_Camera.Compatibility.WardIsLove;
 
 namespace Valheim_Build_Camera
 {
@@ -10,14 +11,12 @@ namespace Valheim_Build_Camera
         {
             if (___m_maxPlaceDistance < Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value)
             {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug(
-                    $"in Player_Awake, changing maxPlaceDistance from {___m_maxPlaceDistance} to {Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value}");
+                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"in Player_Awake, changing maxPlaceDistance from {___m_maxPlaceDistance} to {Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value}");
                 ___m_maxPlaceDistance = Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value;
             }
             else
             {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug(
-                    $"Not changing distanceCanBuildFromAvatar (AKA maxPlaceDistance) as it seems another mod has already changed it.");
+                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"Not changing distanceCanBuildFromAvatar (AKA maxPlaceDistance) as it seems another mod has already changed it.");
             }
         }
     }
@@ -29,14 +28,12 @@ namespace Valheim_Build_Camera
         {
             if (___m_rangeBuild < Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value)
             {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug(
-                    $"in CraftingStation_Start, changing rangeBuild from {___m_rangeBuild} to {Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value}");
+                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"in CraftingStation_Start, changing rangeBuild from {___m_rangeBuild} to {Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value}");
                 ___m_rangeBuild = Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value;
             }
             else
             {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug(
-                    $"Not changing distanceCanBuildFromWorkbench (AKA rangeBuild) as it seems another mod has already changed it.");
+                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"Not changing distanceCanBuildFromWorkbench (AKA rangeBuild) as it seems another mod has already changed it.");
             }
         }
     }
@@ -80,50 +77,49 @@ namespace Valheim_Build_Camera
                     // game source: Player.Update
                     if (__instance.TakeInput())
                     {
-                        if (Input.GetKeyDown(KeyCode.Alpha1))
+                        if (Input.GetKeyDown(KeyCode.Alpha1) || ZInput.GetButtonDown("Hotbar1"))
                         {
                             __instance.UseHotbarItem(1);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha2))
+                        if (Input.GetKeyDown(KeyCode.Alpha2) || ZInput.GetButtonDown("Hotbar2"))
                         {
                             __instance.UseHotbarItem(2);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha3))
+                        if (Input.GetKeyDown(KeyCode.Alpha3) || ZInput.GetButtonDown("Hotbar3"))
                         {
                             __instance.UseHotbarItem(3);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha4))
+                        if (Input.GetKeyDown(KeyCode.Alpha4) || ZInput.GetButtonDown("Hotbar4"))
                         {
                             __instance.UseHotbarItem(4);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha5))
+                        if (Input.GetKeyDown(KeyCode.Alpha5) || ZInput.GetButtonDown("Hotbar5"))
                         {
                             __instance.UseHotbarItem(5);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha6))
+                        if (Input.GetKeyDown(KeyCode.Alpha6) || ZInput.GetButtonDown("Hotbar6"))
                         {
                             __instance.UseHotbarItem(6);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha7))
+                        if (Input.GetKeyDown(KeyCode.Alpha7) || ZInput.GetButtonDown("Hotbar7"))
                         {
                             __instance.UseHotbarItem(7);
                         }
 
-                        if (Input.GetKeyDown(KeyCode.Alpha8))
+                        if (Input.GetKeyDown(KeyCode.Alpha8) || ZInput.GetButtonDown("Hotbar8"))
                         {
                             __instance.UseHotbarItem(8);
                         }
 
                         if (ZInput.GetButtonDown("Hide") || ZInput.GetButtonDown("JoyHide"))
                         {
-                            if ((__instance.GetRightItem() != null || __instance.GetLeftItem() != null)
-                                && !__instance.InAttack())
+                            if ((__instance.GetRightItem() != null || __instance.GetLeftItem() != null) && !__instance.InAttack())
                             {
                                 __instance.HideHandItems();
                             }
@@ -160,8 +156,7 @@ namespace Valheim_Build_Camera
             {
                 if (!__instance.TakeInput())
                 {
-                    Utils.LogWhenVerbose(
-                        "Build Mode not enabled because chat, console, menu, inventory, map, or similar is open.");
+                    Utils.LogWhenVerbose("Build Mode not enabled because chat, console, menu, inventory, map, or similar is open.");
                 }
                 else if (!Utils.ToolIsEquipped(__instance))
                 {
@@ -169,8 +164,7 @@ namespace Valheim_Build_Camera
                 }
                 else if (!Utils.BuildStationInRange(__instance))
                 {
-                    Utils.LogWhenVerbose(
-                        "Build Mode not enabled because no build station (e.g. workbench) is in range.");
+                    Utils.LogWhenVerbose("Build Mode not enabled because no build station (e.g. workbench) is in range.");
                 }
             }
         }
@@ -208,7 +202,15 @@ namespace Valheim_Build_Camera
             if (Utils.InBuildMode())
             {
                 Utils.UpdateBuildCamera(dt, ref __instance);
-                Utils.AutoPickup(dt, ref __instance);
+                if (WardIsLovePlugin.IsLoaded() && CustomCheck.CheckAccess(Player.m_localPlayer.GetPlayerID(), __instance.transform.position, flash: false))
+                {
+                    Utils.AutoPickup(dt, ref __instance);
+                }
+                else if (!WardIsLovePlugin.IsLoaded() && PrivateArea.CheckAccess(__instance.transform.position, flash: false, wardCheck: true))
+                {
+                    Utils.AutoPickup(dt, ref __instance);
+                }
+
                 __runOriginal = false;
             }
             else

@@ -288,13 +288,13 @@ namespace Valheim_Build_Camera
             Vector3 b = __instance.transform.position + Vector3.up;
             foreach (Collider collider in Physics.OverlapSphere(b, Valheim_Build_CameraPlugin.resourcePickupRange.Value, Player.m_localPlayer.m_autoPickupMask))
             {
-                if ((bool)(Object)collider.attachedRigidbody)
+                if (collider.attachedRigidbody)
                 {
                     ItemDrop component = collider.attachedRigidbody.GetComponent<ItemDrop>();
                     FloatingTerrainDummy floatingTerrainDummy = null;
-                    if (component == null && (bool)(Object)(floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && (bool)(Object)floatingTerrainDummy)
+                    if (component == null && (floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && floatingTerrainDummy)
                         component = floatingTerrainDummy.m_parent.gameObject.GetComponent<ItemDrop>();
-                    if (!((Object)component == null) && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
+                    if (component != null && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
                     {
                         if (!component.CanPickup())
                             component.RequestOwn();
@@ -314,7 +314,7 @@ namespace Valheim_Build_Camera
                                     {
                                         Vector3 vector3 = Vector3.Normalize(b - component.transform.position) * 15f * dt;
                                         component.transform.position += vector3;
-                                        if ((bool)(Object)floatingTerrainDummy)
+                                        if (floatingTerrainDummy)
                                             floatingTerrainDummy.transform.position += vector3;
                                     }
                                 }

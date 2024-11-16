@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.4";
+    internal const string ModVersion = "1.2.6";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -81,49 +81,28 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
     void Awake()
     {
-        _serverConfigLocked = config("1 - General", "Lock Configuration", Toggle.On,
-            "If on, the configuration is locked and can be changed by server admins only.");
+        _serverConfigLocked = config("1 - General", "Lock Configuration", Toggle.On, "If on, the configuration is locked and can be changed by server admins only.");
         _ = ConfigSync.AddLockingConfigEntry(_serverConfigLocked);
 
-        distanceCanBuildFromAvatar = config("General", "Distance Can Build From Avatar", 100f,
-            "Distance from your avatar that you can build or repair. (Valheim default is 8)");
+        distanceCanBuildFromAvatar = config("General", "Distance Can Build From Avatar", 100f, "Distance from your avatar that you can build or repair. (Valheim default is 8)");
 
-        distanceCanBuildFromWorkbench
-            = config("General", "Distance Can Build From Workbench", 100f,
-                "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
+        distanceCanBuildFromWorkbench = config("General", "Distance Can Build From Workbench", 100f, "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
         
-        resourcePickupRange
-            = config("General", "Resource Pickup Range", 10f,
-                "Distance from which you can pick up resources on the ground while in build mode. (Valheim default is 2)");
+        resourcePickupRange = config("General", "Resource Pickup Range", 10f, "Distance from which you can pick up resources on the ground while in build mode. (Valheim default is 2)");
 
-        cameraRangeMultiplier
-            = config("General", "Camera Range Multiplier", 1f,
-                "Changes maximum range camera can move away from the build station. 1 means the build station's" +
-                " range, 2 means twice the build station range, etc.");
+        cameraRangeMultiplier = config("General", "Camera Range Multiplier", 1f, "Changes maximum range camera can move away from the build station. 1 means the build station's" + " range, 2 means twice the build station range, etc.");
 
-        cameraMoveSpeedMultiplier
-            = config("General", "Camera Move Speed Multiplier", 3f,
-                "Multiplies the speed at which the build camera pans (i.e. moves around).");
+        cameraMoveSpeedMultiplier = config("General", "Camera Move Speed Multiplier", 3f, "Multiplies the speed at which the build camera pans (i.e. moves around).");
 
-        moveWithRespectToWorld
-            = config("General", "Move With Respect To World", Toggle.Off,
+        moveWithRespectToWorld = config("General", "Move With Respect To World", Toggle.Off,
                 "When true, camera panning input (e.g. pressing WASD) moves the camera with respect to the " +
                 "world coordinates. This means that turning the camera has no effect on the direction of " +
                 "movement. For example, pressing W will always move the camera toward the world's 'North', " +
                 "as opposed to the direction the camera is currently facing.");
 
-        toggleBuildMode =
-            config("Hotkeys", "Toggle build mode", new KeyboardShortcut(KeyCode.B),
-                "See https://docs.unity3d.com/ScriptReference/KeyCode.html for the names of all key codes. To " +
-                "add one or more modifier keys, separate them with +, like so: Toggle build mode = B + LeftControl",
-                false);
+        toggleBuildMode = config("Hotkeys", "Toggle build mode", new KeyboardShortcut(KeyCode.B), "See https://docs.unity3d.com/ScriptReference/KeyCode.html for the names of all key codes. To add one or more modifier keys, separate them with +, like so: Toggle build mode = B + LeftControl", false);
 
-        verboseLogging = config("General", "Verbose Logging", Toggle.Off,
-            "When true, increases verbosity of logging. Enable this if you're wondering why you're unable " +
-            "to enable the Build Camera.", false);
-
-
-        BuildCameraCHELogger.LogMessage("Thank you to everyone who supported this mod on Github. I (Azumatt) will maintain this mod for as long as I can. Shoutout to the original devs and the git contributors. I hope you enjoy this mod!");
+        verboseLogging = config("General", "Verbose Logging", Toggle.Off, "When true, increases verbosity of logging. Enable this if you're wondering why you're unable to enable the Build Camera.", false);
 
         Assembly assembly = Assembly.GetExecutingAssembly();
         _harmony.PatchAll(assembly);
@@ -173,14 +152,9 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     internal static ConfigEntry<KeyboardShortcut> toggleBuildMode = null!;
     internal static ConfigEntry<Toggle> verboseLogging = null!;
 
-    private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description,
-        bool synchronizedSetting = true)
+    private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description, bool synchronizedSetting = true)
     {
-        ConfigDescription extendedDescription =
-            new(
-                description.Description +
-                (synchronizedSetting ? " [Synced with Server]" : " [Not Synced with Server]"),
-                description.AcceptableValues, description.Tags);
+        ConfigDescription extendedDescription = new(description.Description + (synchronizedSetting ? " [Synced with Server]" : " [Not Synced with Server]"), description.AcceptableValues, description.Tags);
         ConfigEntry<T> configEntry = Config.Bind(group, name, value, extendedDescription);
         //var configEntry = Config.Bind(group, name, value, description);
 
@@ -190,8 +164,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         return configEntry;
     }
 
-    private ConfigEntry<T> config<T>(string group, string name, T value, string description,
-        bool synchronizedSetting = true)
+    private ConfigEntry<T> config<T>(string group, string name, T value, string description, bool synchronizedSetting = true)
     {
         return config(group, name, value, new ConfigDescription(description), synchronizedSetting);
     }
@@ -213,8 +186,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         public override object Clamp(object value) => value;
         public override bool IsValid(object value) => true;
 
-        public override string ToDescriptionString() =>
-            "# Acceptable values: " + string.Join(", ", UnityInput.Current.SupportedKeyCodes);
+        public override string ToDescriptionString() => "# Acceptable values: " + string.Join(", ", UnityInput.Current.SupportedKeyCodes);
     }
 
     #endregion
