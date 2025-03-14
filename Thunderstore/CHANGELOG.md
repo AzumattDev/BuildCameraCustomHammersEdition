@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.7
+    * Update ServerSync
 * 1.2.6
     * Add some ward checks to the pickup options.
     * Some additional input checks
