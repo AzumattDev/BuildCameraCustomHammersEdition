@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.7";
+    internal const string ModVersion = "1.2.8";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -87,7 +87,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         distanceCanBuildFromAvatar = config("General", "Distance Can Build From Avatar", 100f, "Distance from your avatar that you can build or repair. (Valheim default is 8)");
 
         distanceCanBuildFromWorkbench = config("General", "Distance Can Build From Workbench", 100f, "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
-        
+
         resourcePickupRange = config("General", "Resource Pickup Range", 10f, "Distance from which you can pick up resources on the ground while in build mode. (Valheim default is 2)");
 
         cameraRangeMultiplier = config("General", "Camera Range Multiplier", 1f, "Changes maximum range camera can move away from the build station. 1 means the build station's" + " range, 2 means twice the build station range, etc.");
@@ -95,10 +95,10 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         cameraMoveSpeedMultiplier = config("General", "Camera Move Speed Multiplier", 3f, "Multiplies the speed at which the build camera pans (i.e. moves around).");
 
         moveWithRespectToWorld = config("General", "Move With Respect To World", Toggle.Off,
-                "When true, camera panning input (e.g. pressing WASD) moves the camera with respect to the " +
-                "world coordinates. This means that turning the camera has no effect on the direction of " +
-                "movement. For example, pressing W will always move the camera toward the world's 'North', " +
-                "as opposed to the direction the camera is currently facing.");
+            "When true, camera panning input (e.g. pressing WASD) moves the camera with respect to the " +
+            "world coordinates. This means that turning the camera has no effect on the direction of " +
+            "movement. For example, pressing W will always move the camera toward the world's 'North', " +
+            "as opposed to the direction the camera is currently facing.");
 
         toggleBuildMode = config("Hotkeys", "Toggle build mode", new KeyboardShortcut(KeyCode.B), "See https://docs.unity3d.com/ScriptReference/KeyCode.html for the names of all key codes. To add one or more modifier keys, separate them with +, like so: Toggle build mode = B + LeftControl", false);
 

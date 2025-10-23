@@ -228,12 +228,13 @@ namespace Valheim_Build_Camera
                 vector -= Vector3.forward;
             }
 
-            if (ZInput.GetButton("Jump") || ZInput.GetButton("JoyJump"))
+            Character.takeInputDelay = Mathf.Max(0.0f, Character.takeInputDelay - dt);
+            if (ZInput.GetButton("Jump") || ZInput.GetButton("JoyJump") && Character.takeInputDelay <= 0.0 && !Hud.IsPieceSelectionVisible())
             {
                 vector += Vector3.up;
             }
 
-            if (ZInput.GetButton("Crouch") || ZInput.GetButton("JoyCrouch"))
+            if (ZInput.GetButton("Crouch") || ZInput.GetButtonPressedTimer("JoyCrouch") > 0.33000001311302185)
             {
                 vector -= Vector3.up;
             }

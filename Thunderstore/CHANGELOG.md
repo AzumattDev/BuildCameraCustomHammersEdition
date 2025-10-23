@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.8
+  * Fix for flying when using a controller. 
 * 1.2.7
     * Update ServerSync
 * 1.2.6
