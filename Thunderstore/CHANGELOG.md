@@ -2,6 +2,10 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.9
+  * Make the build camera inherit the Wisplight from the player. It will now follow the camera while in build mode and smoothly transition back to the player when you leave it. Thank you to [amberbeanzz](https://www.twitch.tv/amberbeanzz) for the idea!
+    * Defaults to being 2.5x the normal clearing range for easier building.
+    * Configure the range, configure if the feature is on or not. (Default is on)
 * 1.2.8
   * Fix for flying when using a controller. 
 * 1.2.7

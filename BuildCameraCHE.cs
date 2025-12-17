@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.8";
+    internal const string ModVersion = "1.2.9";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -104,6 +104,10 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
         verboseLogging = config("General", "Verbose Logging", Toggle.Off, "When true, increases verbosity of logging. Enable this if you're wondering why you're unable to enable the Build Camera.", false);
 
+        demisterFollowCamera = config("Mist", "Demister Follow Camera", Toggle.On, "When enabled and you have the Demister status effect (Wisplight), the demister ball will follow the build camera instead of your character while in build mode.");
+
+        demisterRangeMultiplier = config("Mist", "Demister Range Multiplier", 2.5f, "Multiplier for the demister's mist-clearing range while in build mode. Higher values clear more mist. (Default: 2.5x, Vanilla: 1.0x)");
+
         Assembly assembly = Assembly.GetExecutingAssembly();
         _harmony.PatchAll(assembly);
         SetupWatcher();
@@ -151,6 +155,8 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     internal static ConfigEntry<Toggle> moveWithRespectToWorld = null!;
     internal static ConfigEntry<KeyboardShortcut> toggleBuildMode = null!;
     internal static ConfigEntry<Toggle> verboseLogging = null!;
+    internal static ConfigEntry<Toggle> demisterFollowCamera = null!;
+    internal static ConfigEntry<float> demisterRangeMultiplier = null!;
 
     private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description, bool synchronizedSetting = true)
     {

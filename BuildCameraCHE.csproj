@@ -70,6 +70,7 @@
         <Compile Include="Compatibility\WardIsLove\WardMonoscript.cs" />
         <Compile Include="Patches.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
+        <Compile Include="SE_DemisterCameraPatch.cs" />
         <Compile Include="Utils.cs" />
         <Compile Include="VersionHandshake.cs" />
     </ItemGroup>
@@ -120,6 +121,9 @@
         </Reference>
         <Reference Include="Unity.TextMeshPro">
             <HintPath>$(CorlibPath)\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.ParticleSystemModule">
+            <HintPath>$(CorlibPath)\UnityEngine.ParticleSystemModule.dll</HintPath>
         </Reference>
     </ItemGroup>
     <ItemGroup>
