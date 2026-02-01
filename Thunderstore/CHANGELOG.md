@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.2.10
+  * Add a new configuration section `Controls` that allows inverting mouse or controller look directions. 
 * 1.2.9
   * Make the build camera inherit the Wisplight from the player. It will now follow the camera while in build mode and smoothly transition back to the player when you leave it. Thank you to [amberbeanzz](https://www.twitch.tv/amberbeanzz) for the idea!
     * Defaults to being 2.5x the normal clearing range for easier building.

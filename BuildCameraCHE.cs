@@ -26,7 +26,7 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.9";
+    internal const string ModVersion = "1.2.10";
     internal const string Author = "Azumatt";
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
@@ -108,6 +108,11 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 
         demisterRangeMultiplier = config("Mist", "Demister Range Multiplier", 2.5f, "Multiplier for the demister's mist-clearing range while in build mode. Higher values clear more mist. (Default: 2.5x, Vanilla: 1.0x)");
 
+        invertControllerLookHorizontal = config("Controls", "Invert Controller Look Horizontal", Toggle.Off, "Inverts the horizontal (left/right) look axis for the controller right stick while in build camera mode.", false);
+        invertControllerLookVertical = config("Controls", "Invert Controller Look Vertical", Toggle.Off, "Inverts the vertical (up/down) look axis for the controller right stick while in build camera mode.", false);
+        invertMouseLookHorizontal = config("Controls", "Invert Mouse Look Horizontal", Toggle.Off, "Inverts the horizontal (left/right) look axis for the mouse while in build camera mode.", false);
+        invertMouseLookVertical = config("Controls", "Invert Mouse Look Vertical", Toggle.Off, "Inverts the vertical (up/down) look axis for the mouse while in build camera mode. This is separate from the game's built-in mouse invert setting.", false);
+
         Assembly assembly = Assembly.GetExecutingAssembly();
         _harmony.PatchAll(assembly);
         SetupWatcher();
@@ -157,6 +162,10 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     internal static ConfigEntry<Toggle> verboseLogging = null!;
     internal static ConfigEntry<Toggle> demisterFollowCamera = null!;
     internal static ConfigEntry<float> demisterRangeMultiplier = null!;
+    internal static ConfigEntry<Toggle> invertControllerLookHorizontal = null!;
+    internal static ConfigEntry<Toggle> invertControllerLookVertical = null!;
+    internal static ConfigEntry<Toggle> invertMouseLookHorizontal = null!;
+    internal static ConfigEntry<Toggle> invertMouseLookVertical = null!;
 
     private ConfigEntry<T> config<T>(string group, string name, T value, ConfigDescription description, bool synchronizedSetting = true)
     {

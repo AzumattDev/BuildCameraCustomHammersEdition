@@ -137,8 +137,7 @@ namespace Valheim_Build_Camera
 
         static void Postfix(ref Player __instance)
         {
-            if (Utils.IsLocalPlayer(__instance) && Valheim_Build_CameraPlugin.toggleBuildMode.Value.IsDown() &&
-                __instance.TakeInput())
+            if (Utils.IsLocalPlayer(__instance) && Valheim_Build_CameraPlugin.toggleBuildMode.Value.IsDown() && __instance.TakeInput())
             {
                 if (!Utils.InBuildMode() && Utils.ToolIsEquipped(__instance) && Utils.BuildStationInRange(__instance))
                 {

@@ -179,16 +179,19 @@ namespace Valheim_Build_Camera
         static Quaternion UpdateBuildCameraViewDirection(float dt)
         {
             // Game source: GameCamera.UpdateFreeFly(float dt)
+            float mouseHorizontalPolarity = Valheim_Build_CameraPlugin.invertMouseLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
+            float controllerHorizontalPolarity = Valheim_Build_CameraPlugin.invertControllerLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
             Valheim_Build_CameraPlugin.buildCameraViewDirection.yaw +=
-                (PlayerController.m_mouseSens * Input.GetAxis("Mouse X"))
-                + (ZInput.GetJoyRightStickX() * 110f * dt);
+                mouseHorizontalPolarity * (PlayerController.m_mouseSens * Input.GetAxis("Mouse X"))
+                + (controllerHorizontalPolarity * ZInput.GetJoyRightStickX() * 110f * dt);
 
-            float polarity = PlayerController.m_invertMouse ? -1 : 1;
+            float mousePolarity = PlayerController.m_invertMouse ? -1 : 1;
+            float mouseVerticalPolarity = Valheim_Build_CameraPlugin.invertMouseLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -mousePolarity : mousePolarity;
+            float controllerVerticalPolarity = Valheim_Build_CameraPlugin.invertControllerLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
             float pitchUnchecked =
                 Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch -
-                polarity
-                * ((PlayerController.m_mouseSens * Input.GetAxis("Mouse Y"))
-                   - (ZInput.GetJoyRightStickY() * 110f * dt));
+                (mouseVerticalPolarity * (PlayerController.m_mouseSens * Input.GetAxis("Mouse Y"))
+                 - (controllerVerticalPolarity * ZInput.GetJoyRightStickY() * 110f * dt));
             Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch = Mathf.Clamp(pitchUnchecked, -89f, 89f);
 
             return
