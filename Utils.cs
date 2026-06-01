@@ -27,6 +27,9 @@ namespace Valheim_Build_Camera
         internal static void EnableBuildMode()
         {
             Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer] = true;
+            Player.m_localPlayer.m_hovering = null;
+            Player.m_localPlayer.m_hoveringCreature = null;
+            Player.m_localPlayer.m_hoveringPiece = null;
 
             // When entering build mode, we reset the view direction of the build
             // camera, so that it matches the player's current direction. Thus, when
@@ -161,10 +164,11 @@ namespace Valheim_Build_Camera
         {
             if (ZoneSystem.instance.GetGroundHeight(__instance.transform.position, out float height))
             {
-                if (__instance.transform.position.y < height)
+                float minimumHeight = height + Valheim_Build_CameraPlugin.CameraGroundClearance;
+                if (__instance.transform.position.y < minimumHeight)
                 {
                     Vector3 p = __instance.transform.position;
-                    p.y = height;
+                    p.y = minimumHeight;
                     __instance.transform.position = p;
                 }
             }
@@ -285,48 +289,5 @@ namespace Valheim_Build_Camera
             }
         }
 
-        public static void AutoPickup(float dt, ref GameCamera __instance)
-        {
-            if (Player.m_localPlayer.IsTeleporting() || !Player.m_enableAutoPickup || Player.m_localPlayer == null)
-                return;
-            Vector3 b = __instance.transform.position + Vector3.up;
-            foreach (Collider collider in Physics.OverlapSphere(b, Valheim_Build_CameraPlugin.resourcePickupRange.Value, Player.m_localPlayer.m_autoPickupMask))
-            {
-                if (collider.attachedRigidbody)
-                {
-                    ItemDrop component = collider.attachedRigidbody.GetComponent<ItemDrop>();
-                    FloatingTerrainDummy floatingTerrainDummy = null;
-                    if (component == null && (floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && floatingTerrainDummy)
-                        component = floatingTerrainDummy.m_parent.gameObject.GetComponent<ItemDrop>();
-                    if (component != null && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
-                    {
-                        if (!component.CanPickup())
-                            component.RequestOwn();
-                        else if (!component.InTar())
-                        {
-                            component.Load();
-                            if (Player.m_localPlayer.m_inventory.CanAddItem(component.m_itemData) && component.m_itemData.GetWeight() + (double)Player.m_localPlayer.m_inventory.GetTotalWeight() <= (double)Player.m_localPlayer.GetMaxCarryWeight())
-                            {
-                                float num = Vector3.Distance(component.transform.position, b);
-                                if (num <= (double)Valheim_Build_CameraPlugin.resourcePickupRange.Value)
-                                {
-                                    if (num < Valheim_Build_CameraPlugin.resourcePickupRange.Value)
-                                    {
-                                        Player.m_localPlayer.Pickup(component.gameObject);
-                                    }
-                                    else
-                                    {
-                                        Vector3 vector3 = Vector3.Normalize(b - component.transform.position) * 15f * dt;
-                                        component.transform.position += vector3;
-                                        if (floatingTerrainDummy)
-                                            floatingTerrainDummy.transform.position += vector3;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
