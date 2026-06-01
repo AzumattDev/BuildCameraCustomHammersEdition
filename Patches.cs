@@ -170,6 +170,22 @@ namespace Valheim_Build_Camera
     }
 
     /// <summary>
+    /// Optionally prevents dropped items from auto-collecting while the build camera is active.
+    /// </summary>
+    /// <param name="__instance"></param>
+    /// <param name="__runOriginal"></param>
+    [HarmonyPatch(typeof(Player), nameof(Player.AutoPickup))]
+    static class Player_AutoPickup_Patch
+    {
+        static void Prefix(Player __instance, ref bool __runOriginal)
+        {
+            __runOriginal = Valheim_Build_CameraPlugin.blockAutoPickupInBuildMode.Value != Valheim_Build_CameraPlugin.Toggle.On
+                || !Utils.IsLocalPlayer(__instance)
+                || !Utils.InBuildMode();
+        }
+    }
+
+    /// <summary>
     /// Stops the player's avatar from moving when in build mode.
     /// </summary>
     /// <param name="__result"></param>

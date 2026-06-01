@@ -27,6 +27,9 @@ namespace Valheim_Build_Camera
         internal static void EnableBuildMode()
         {
             Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer] = true;
+            Player.m_localPlayer.m_hovering = null;
+            Player.m_localPlayer.m_hoveringCreature = null;
+            Player.m_localPlayer.m_hoveringPiece = null;
 
             // When entering build mode, we reset the view direction of the build
             // camera, so that it matches the player's current direction. Thus, when
@@ -161,10 +164,11 @@ namespace Valheim_Build_Camera
         {
             if (ZoneSystem.instance.GetGroundHeight(__instance.transform.position, out float height))
             {
-                if (__instance.transform.position.y < height)
+                float minimumHeight = height + Valheim_Build_CameraPlugin.CameraGroundClearance;
+                if (__instance.transform.position.y < minimumHeight)
                 {
                     Vector3 p = __instance.transform.position;
-                    p.y = height;
+                    p.y = minimumHeight;
                     __instance.transform.position = p;
                 }
             }
@@ -287,6 +291,8 @@ namespace Valheim_Build_Camera
 
         public static void AutoPickup(float dt, ref GameCamera __instance)
         {
+            if (Valheim_Build_CameraPlugin.blockAutoPickupInBuildMode.Value == Valheim_Build_CameraPlugin.Toggle.On)
+                return;
             if (Player.m_localPlayer.IsTeleporting() || !Player.m_enableAutoPickup || Player.m_localPlayer == null)
                 return;
             Vector3 b = __instance.transform.position + Vector3.up;
@@ -328,5 +334,6 @@ namespace Valheim_Build_Camera
                 }
             }
         }
+
     }
 }

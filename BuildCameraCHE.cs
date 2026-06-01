@@ -26,8 +26,9 @@ namespace Valheim_Build_Camera;
 public class Valheim_Build_CameraPlugin : BaseUnityPlugin
 {
     internal const string ModName = "BuildCameraCHE";
-    internal const string ModVersion = "1.2.10";
+    internal const string ModVersion = "1.2.11";
     internal const string Author = "Azumatt";
+    internal const float CameraGroundClearance = 0.5f;
     private const string ModGUID = Author + "." + ModName;
     private readonly Harmony _harmony = new(ModGUID);
     private static string ConfigFileName = ModGUID + ".cfg";
@@ -89,6 +90,8 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
         distanceCanBuildFromWorkbench = config("General", "Distance Can Build From Workbench", 100f, "Distance from nearest workbench/stonecutter/etc. that you can build or repair. (Valheim default is 20)");
 
         resourcePickupRange = config("General", "Resource Pickup Range", 10f, "Distance from which you can pick up resources on the ground while in build mode. (Valheim default is 2)");
+
+        blockAutoPickupInBuildMode = config("General", "Block Auto Pickup In Build Mode", Toggle.Off, "When enabled, prevents dropped items from being automatically picked up while build mode is active.");
 
         cameraRangeMultiplier = config("General", "Camera Range Multiplier", 1f, "Changes maximum range camera can move away from the build station. 1 means the build station's" + " range, 2 means twice the build station range, etc.");
 
@@ -155,6 +158,7 @@ public class Valheim_Build_CameraPlugin : BaseUnityPlugin
     internal static ConfigEntry<float> distanceCanBuildFromAvatar = null!;
     internal static ConfigEntry<float> distanceCanBuildFromWorkbench = null!;
     internal static ConfigEntry<float> resourcePickupRange = null!;
+    internal static ConfigEntry<Toggle> blockAutoPickupInBuildMode = null!;
     internal static ConfigEntry<float> cameraRangeMultiplier = null!;
     internal static ConfigEntry<float> cameraMoveSpeedMultiplier = null!;
     internal static ConfigEntry<Toggle> moveWithRespectToWorld = null!;
