@@ -289,5 +289,51 @@ namespace Valheim_Build_Camera
             }
         }
 
+        public static void AutoPickup(float dt, ref GameCamera __instance)
+        {
+            if (Valheim_Build_CameraPlugin.blockAutoPickupInBuildMode.Value == Valheim_Build_CameraPlugin.Toggle.On)
+                return;
+            if (Player.m_localPlayer.IsTeleporting() || !Player.m_enableAutoPickup || Player.m_localPlayer == null)
+                return;
+            Vector3 b = __instance.transform.position + Vector3.up;
+            foreach (Collider collider in Physics.OverlapSphere(b, Valheim_Build_CameraPlugin.resourcePickupRange.Value, Player.m_localPlayer.m_autoPickupMask))
+            {
+                if (collider.attachedRigidbody)
+                {
+                    ItemDrop component = collider.attachedRigidbody.GetComponent<ItemDrop>();
+                    FloatingTerrainDummy floatingTerrainDummy = null;
+                    if (component == null && (floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && floatingTerrainDummy)
+                        component = floatingTerrainDummy.m_parent.gameObject.GetComponent<ItemDrop>();
+                    if (component != null && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
+                    {
+                        if (!component.CanPickup())
+                            component.RequestOwn();
+                        else if (!component.InTar())
+                        {
+                            component.Load();
+                            if (Player.m_localPlayer.m_inventory.CanAddItem(component.m_itemData) && component.m_itemData.GetWeight() + (double)Player.m_localPlayer.m_inventory.GetTotalWeight() <= (double)Player.m_localPlayer.GetMaxCarryWeight())
+                            {
+                                float num = Vector3.Distance(component.transform.position, b);
+                                if (num <= (double)Valheim_Build_CameraPlugin.resourcePickupRange.Value)
+                                {
+                                    if (num < Valheim_Build_CameraPlugin.resourcePickupRange.Value)
+                                    {
+                                        Player.m_localPlayer.Pickup(component.gameObject);
+                                    }
+                                    else
+                                    {
+                                        Vector3 vector3 = Vector3.Normalize(b - component.transform.position) * 15f * dt;
+                                        component.transform.position += vector3;
+                                        if (floatingTerrainDummy)
+                                            floatingTerrainDummy.transform.position += vector3;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }

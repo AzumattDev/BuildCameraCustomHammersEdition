@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using UnityEngine;
+using Valheim_Build_Camera.Compatibility.WardIsLove;
 
 namespace Valheim_Build_Camera
 {
@@ -169,7 +170,7 @@ namespace Valheim_Build_Camera
     }
 
     /// <summary>
-    /// Prevents dropped items from auto-collecting while the build camera is active.
+    /// Optionally prevents dropped items from auto-collecting while the build camera is active.
     /// </summary>
     /// <param name="__instance"></param>
     /// <param name="__runOriginal"></param>
@@ -178,7 +179,9 @@ namespace Valheim_Build_Camera
     {
         static void Prefix(Player __instance, ref bool __runOriginal)
         {
-            __runOriginal = !(Utils.IsLocalPlayer(__instance) && Utils.InBuildMode());
+            __runOriginal = Valheim_Build_CameraPlugin.blockAutoPickupInBuildMode.Value != Valheim_Build_CameraPlugin.Toggle.On
+                || !Utils.IsLocalPlayer(__instance)
+                || !Utils.InBuildMode();
         }
     }
 
@@ -214,6 +217,15 @@ namespace Valheim_Build_Camera
             if (Utils.InBuildMode())
             {
                 Utils.UpdateBuildCamera(dt, ref __instance);
+                if (WardIsLovePlugin.IsLoaded() && CustomCheck.CheckAccess(Player.m_localPlayer.GetPlayerID(), __instance.transform.position, flash: false))
+                {
+                    Utils.AutoPickup(dt, ref __instance);
+                }
+                else if (!WardIsLovePlugin.IsLoaded() && PrivateArea.CheckAccess(__instance.transform.position, flash: false, wardCheck: true))
+                {
+                    Utils.AutoPickup(dt, ref __instance);
+                }
+
                 __runOriginal = false;
             }
             else
