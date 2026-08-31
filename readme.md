@@ -19,9 +19,13 @@ Fork from [Build Camera](https://github.com/gittywithexcitement/ValheimBuildCame
 
 ## Other details
 
-* This mod changes how far from a work station you're able to build to several times the game default, see the
-  configuration options Distance_Can_Build_From_Avatar and Distance_Can_Build_From_Workbench. There was much demand for
-  this feature.
+* Build Camera uses its own configurable station range. It does not expand workbench effect areas or suppress raids
+  outside the station's real player-base radius.
+* The camera cannot cross terrain. HearthBelow cave floors, walls, and ceilings use the same collision path.
+* Camera entry or camera item pickup can require coziness and a minimum comfort level.
+* An equipped Dvergr circlet can follow the detached camera, including CircletExtended and RaziCirclet custom slots.
+  The camera copy keeps the equipped light's settings unless its config overrides them.
+* Blocked pickups use a configurable HUD panel with Valheim's font and build-menu styling.
 * Deactivate build mode by unequipping the hammer or pressing B or R (the keybind for "hide" weapons).
 * Also works with the hoe and the cultivator.
 * The camera must stay within the build area, although the range is configurable with Camera_Range_Multiplier.
@@ -42,6 +46,18 @@ several configurable options:
 * Toggle build mode hotkey
 * Camera Move Speed Multiplier
 * Camera Range Multiplier
+* Camera Terrain Clearance
+* Restriction Mode
+* Minimum Comfort Level
+* Follow Dvergr Circlet Light
+* Camera Light Forward/Back Offset
+* Camera Light Up/Down Offset
+* Camera Light Left/Right Offset
+* Camera Light Intensity Multiplier
+* Camera Light Range Multiplier
+* Camera Light Color
+* Camera Light Shadows
+* Pickup Blocked HUD Position and Font Size
 * Move With Respect To World
 * Verbose Logging
 
@@ -54,6 +70,8 @@ several configurable options:
 # Compatible with
 
 * My [FirstPersonMode](https://valheim.thunderstore.io/package/Azumatt/FirstPersonMode/) mod, on [Thunderstore's Valheim Community mods](https://valheim.thunderstore.io/)
+* HearthBelow
+* CircletExtended and RaziCirclet
 * I've been told Build Camera is compatible with with kailen37's FirstPerson mod on nexusmods.com. I haven't tested it
   myself.
 

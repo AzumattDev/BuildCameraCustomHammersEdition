@@ -1,221 +1,202 @@
-﻿using HarmonyLib;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using HarmonyLib;
 using UnityEngine;
 using Valheim_Build_Camera.Compatibility.WardIsLove;
 
 namespace Valheim_Build_Camera
 {
-    [HarmonyPatch(typeof(Player), nameof(Player.Awake))]
-    static class Player_Awake
-    {
-        static void Prefix(Player __instance, ref float ___m_maxPlaceDistance)
-        {
-            if (___m_maxPlaceDistance < Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value)
-            {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"in Player_Awake, changing maxPlaceDistance from {___m_maxPlaceDistance} to {Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value}");
-                ___m_maxPlaceDistance = Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value;
-            }
-            else
-            {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"Not changing distanceCanBuildFromAvatar (AKA maxPlaceDistance) as it seems another mod has already changed it.");
-            }
-        }
-    }
+	[HarmonyPatch(typeof(Localization), nameof(Localization.SetupLanguage))]
+	static class Localization_SetupLanguage_Patch
+	{
+		static void Postfix(Localization __instance)
+		{
+			Utils.AddLocalizations(__instance);
+			PickupBlockedHud.LanguageChanged();
+		}
+	}
 
-    [HarmonyPatch(typeof(CraftingStation), nameof(CraftingStation.Start))]
-    static class CraftingStation_Start_Patch
-    {
-        static void Prefix(CraftingStation __instance, ref float ___m_rangeBuild)
-        {
-            if (___m_rangeBuild < Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value)
-            {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"in CraftingStation_Start, changing rangeBuild from {___m_rangeBuild} to {Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value}");
-                ___m_rangeBuild = Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value;
-            }
-            else
-            {
-                Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogDebug($"Not changing distanceCanBuildFromWorkbench (AKA rangeBuild) as it seems another mod has already changed it.");
-            }
-        }
-    }
+	[HarmonyPatch(typeof(CraftingStation), nameof(CraftingStation.HaveBuildStationInRange))]
+	static class CraftingStation_HaveBuildStationInRange_Patch
+	{
+		static void Postfix(string name, Vector3 point, ref CraftingStation __result)
+		{
+			if (!__result && Utils.InBuildMode() && Utils.FindCameraStation(name, point) is { } station)
+				__result = station;
+		}
+	}
 
-    [HarmonyPatch(typeof(Player), nameof(Player.SetLocalPlayer))]
-    static class Player_SetLocalPlayer_Patch
-    {
-        static void Postfix(Player __instance)
-        {
-            Utils.DisableBuildMode();
-        }
-    }
+	[HarmonyPatch]
+	static class Player_BuildCameraPlacementDistance_Patch
+	{
+		static IEnumerable<MethodBase> TargetMethods()
+		{
+			yield return AccessTools.DeclaredMethod(typeof(Player), "PieceRayTest");
+			yield return AccessTools.DeclaredMethod(typeof(Player), "UpdateWearNTearHover");
+			yield return AccessTools.DeclaredMethod(typeof(Player), "CopyPiece");
+			yield return AccessTools.DeclaredMethod(typeof(Player), "RemovePiece");
+		}
 
+		static void Prefix(ref float ___m_maxPlaceDistance, out float __state)
+		{
+			__state = ___m_maxPlaceDistance;
+			if (Utils.InBuildMode())
+				___m_maxPlaceDistance = Mathf.Max(___m_maxPlaceDistance, Valheim_Build_CameraPlugin.distanceCanBuildFromAvatar.Value);
+		}
 
-    /// <summary>
-    /// Skip the game's Update when in build mode, to disallow actions like
-    /// Interact(). Only allow UpdatePlacement.
-    /// </summary>
-    /// <param name="__instance"></param>
-    /// <param name="__runOriginal"></param>
-    [HarmonyPatch(typeof(Player), nameof(Player.Update))]
-    static class Player_Update_Patch
-    {
-        static void Prefix(ref Player __instance, ref bool __runOriginal)
-        {
-            if (Utils.IsLocalPlayer(__instance) && Utils.InBuildMode())
-            {
-                if (Utils.ShouldDeactivateBuildMode(__instance))
-                {
-                    // The user might have unequipped the hammer (e.g. by using hotbar
-                    // items or unequipping via the inventory), so deactivate build mode.
-                    Utils.DisableBuildMode();
+		static Exception Finalizer(Exception __exception, ref float ___m_maxPlaceDistance, float __state)
+		{
+			___m_maxPlaceDistance = __state;
+			return __exception;
+		}
+	}
 
-                    __runOriginal = true;
-                }
-                else
-                {
-                    __runOriginal = false;
+	[HarmonyPatch(typeof(Player), nameof(Player.SetLocalPlayer))]
+	static class Player_SetLocalPlayer_Patch
+	{
+		static void Postfix()
+		{
+			PickupBlockedHud.Cleanup();
+			Utils.DisableBuildMode();
+		}
+	}
 
-                    // Allow hotkeys so that hammer can be unequipped, which exits build mode
-                    // game source: Player.Update
-                    if (__instance.TakeInput())
-                    {
-                        if (Input.GetKeyDown(KeyCode.Alpha1) || ZInput.GetButtonDown("Hotbar1"))
-                        {
-                            __instance.UseHotbarItem(1);
-                        }
+	[HarmonyPatch(typeof(Player), nameof(Player.Update))]
+	static class Player_Update_Patch
+	{
+		private static readonly string[] HotbarButtons =
+		{
+			"Hotbar1", "Hotbar2", "Hotbar3", "Hotbar4", "Hotbar5", "Hotbar6", "Hotbar7", "Hotbar8",
+		};
 
-                        if (Input.GetKeyDown(KeyCode.Alpha2) || ZInput.GetButtonDown("Hotbar2"))
-                        {
-                            __instance.UseHotbarItem(2);
-                        }
+		static void Prefix(Player __instance, ref bool __runOriginal)
+		{
+			if (!Utils.IsLocalPlayer(__instance) || !Utils.InBuildMode())
+			{
+				__runOriginal = true;
+				return;
+			}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha3) || ZInput.GetButtonDown("Hotbar3"))
-                        {
-                            __instance.UseHotbarItem(3);
-                        }
+			if (!Utils.CanUseCamera())
+			{
+				Utils.ShowComfortMessage();
+				Utils.DisableBuildMode();
+				__runOriginal = true;
+				return;
+			}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha4) || ZInput.GetButtonDown("Hotbar4"))
-                        {
-                            __instance.UseHotbarItem(4);
-                        }
+			if (Utils.ShouldDeactivateBuildMode(__instance))
+			{
+				Utils.DisableBuildMode();
+				__runOriginal = true;
+				return;
+			}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha5) || ZInput.GetButtonDown("Hotbar5"))
-                        {
-                            __instance.UseHotbarItem(5);
-                        }
+			__runOriginal = false;
+			if (!__instance.TakeInput()) return;
+			for (int index = 0; index < HotbarButtons.Length; ++index)
+			{
+				if (Input.GetKeyDown(KeyCode.Alpha1 + index) || ZInput.GetButtonDown(HotbarButtons[index]))
+					__instance.UseHotbarItem(index + 1);
+			}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha6) || ZInput.GetButtonDown("Hotbar6"))
-                        {
-                            __instance.UseHotbarItem(6);
-                        }
+			if (ZInput.GetButtonDown("Hide") || ZInput.GetButtonDown("JoyHide"))
+			{
+				if ((__instance.GetRightItem() != null || __instance.GetLeftItem() != null) && !__instance.InAttack())
+					__instance.HideHandItems();
+			}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha7) || ZInput.GetButtonDown("Hotbar7"))
-                        {
-                            __instance.UseHotbarItem(7);
-                        }
+			__instance.UpdatePlacement(true, Time.deltaTime);
+		}
 
-                        if (Input.GetKeyDown(KeyCode.Alpha8) || ZInput.GetButtonDown("Hotbar8"))
-                        {
-                            __instance.UseHotbarItem(8);
-                        }
+		static void Postfix(Player __instance)
+		{
+			if (!Utils.IsLocalPlayer(__instance) || !Valheim_Build_CameraPlugin.toggleBuildMode.Value.IsDown()) return;
+			if (Utils.InBuildMode())
+			{
+				if (__instance.TakeInput()) Utils.DisableBuildMode();
+				return;
+			}
 
-                        if (ZInput.GetButtonDown("Hide") || ZInput.GetButtonDown("JoyHide"))
-                        {
-                            if ((__instance.GetRightItem() != null || __instance.GetLeftItem() != null) && !__instance.InAttack())
-                            {
-                                __instance.HideHandItems();
-                            }
-                        }
+			if (!__instance.TakeInput())
+			{
+				Utils.LogWhenVerbose("Build Mode not enabled because chat, console, menu, inventory, map, or similar is open.");
+				return;
+			}
 
-                        __instance.UpdatePlacement(true, Time.deltaTime);
-                    }
-                }
-            }
-            else
-            {
-                __runOriginal = true;
-            }
-        }
+			if (!Utils.ToolIsEquipped(__instance))
+			{
+				Utils.LogWhenVerbose("Build Mode not enabled because hammer is not equipped.");
+				return;
+			}
 
-        static void Postfix(ref Player __instance)
-        {
-            if (Utils.IsLocalPlayer(__instance) && Valheim_Build_CameraPlugin.toggleBuildMode.Value.IsDown() && __instance.TakeInput())
-            {
-                if (!Utils.InBuildMode() && Utils.ToolIsEquipped(__instance) && Utils.BuildStationInRange(__instance))
-                {
-                    Utils.EnableBuildMode();
-                    return;
-                }
-                else if (Utils.InBuildMode())
-                {
-                    Utils.DisableBuildMode();
-                    return;
-                }
-            }
+			if (!Utils.BuildStationInRange(__instance))
+			{
+				Utils.LogWhenVerbose("Build Mode not enabled because no build station (e.g. workbench) is in range.");
+				return;
+			}
 
-            if (Utils.IsLocalPlayer(__instance) && Valheim_Build_CameraPlugin.toggleBuildMode.Value.IsDown())
-            {
-                if (!__instance.TakeInput())
-                {
-                    Utils.LogWhenVerbose("Build Mode not enabled because chat, console, menu, inventory, map, or similar is open.");
-                }
-                else if (!Utils.ToolIsEquipped(__instance))
-                {
-                    Utils.LogWhenVerbose("Build Mode not enabled because hammer is not equipped.");
-                }
-                else if (!Utils.BuildStationInRange(__instance))
-                {
-                    Utils.LogWhenVerbose("Build Mode not enabled because no build station (e.g. workbench) is in range.");
-                }
-            }
-        }
-    }
+			if (!Utils.CanUseCamera())
+			{
+				Utils.ShowComfortMessage();
+				Utils.LogWhenVerbose("Build Mode not enabled because the cozy and comfort requirement is not met.");
+				return;
+			}
 
-    /// <summary>
-    /// Stops the player's avatar from moving when in build mode.
-    /// </summary>
-    /// <param name="__result"></param>
-    /// <param name="__runOriginal"></param>
-    [HarmonyPatch(typeof(PlayerController), nameof(PlayerController.TakeInput))]
-    static class PlayerController_TakeInput_Patch
-    {
-        static void Prefix(PlayerController __instance, ref bool __result, ref bool __runOriginal)
-        {
-            if (Utils.InBuildMode())
-            {
-                __result = false;
-                __runOriginal = false;
-            }
-            else
-            {
-                __runOriginal = true;
-            }
-        }
-    }
+			Utils.EnableBuildMode();
+		}
+	}
 
-    [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateCamera))]
-    [HarmonyBefore("Azumatt.FirstPersonMode")]
-    [HarmonyPriority(Priority.VeryHigh)]
-    static class GameCamera_UpdateCamera_Patch
-    {
-        static void Prefix(float dt, ref GameCamera __instance, ref bool __runOriginal)
-        {
-            if (Utils.InBuildMode())
-            {
-                Utils.UpdateBuildCamera(dt, ref __instance);
-                if (WardIsLovePlugin.IsLoaded() && CustomCheck.CheckAccess(Player.m_localPlayer.GetPlayerID(), __instance.transform.position, flash: false))
-                {
-                    Utils.AutoPickup(dt, ref __instance);
-                }
-                else if (!WardIsLovePlugin.IsLoaded() && PrivateArea.CheckAccess(__instance.transform.position, flash: false, wardCheck: true))
-                {
-                    Utils.AutoPickup(dt, ref __instance);
-                }
+	[HarmonyPatch(typeof(PlayerController), nameof(PlayerController.TakeInput))]
+	static class PlayerController_TakeInput_Patch
+	{
+		static void Prefix(ref bool __result, ref bool __runOriginal)
+		{
+			if (!Utils.InBuildMode())
+			{
+				__runOriginal = true;
+				return;
+			}
 
-                __runOriginal = false;
-            }
-            else
-            {
-                __runOriginal = true;
-            }
-        }
-    }
+			__result = false;
+			__runOriginal = false;
+		}
+	}
+
+	[HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateCamera))]
+	[HarmonyBefore("Azumatt.FirstPersonMode")]
+	[HarmonyPriority(Priority.VeryHigh)]
+	static class GameCamera_UpdateCamera_Patch
+	{
+		private const float PickupScanInterval = 0.1f;
+		private static float _nextPickupScan;
+
+		static void Prefix(float dt, GameCamera __instance, ref bool __runOriginal)
+		{
+			if (!Utils.InBuildMode())
+			{
+				_nextPickupScan = 0f;
+				__runOriginal = true;
+				return;
+			}
+
+			Utils.UpdateBuildCamera(dt, __instance);
+			if (Time.time >= _nextPickupScan)
+			{
+				_nextPickupScan = Time.time + PickupScanInterval;
+				if (Utils.TryGetAutoPickupPlayer(out Player player))
+				{
+					if (WardAccess.Check(player.GetPlayerID(), __instance.transform.position)) Utils.AutoPickup(__instance, player);
+				}
+			}
+
+			__runOriginal = false;
+		}
+
+		static void Postfix(GameCamera __instance)
+		{
+			if (Utils.InBuildMode()) DvergrCircletCameraLight.Update(__instance);
+		}
+	}
 }

@@ -1,332 +1,366 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Valheim_Build_Camera
 {
-    public class Utils
-    {
-        internal static void LogWhenVerbose(string s)
-        {
-            if (Valheim_Build_CameraPlugin.verboseLogging.Value != Valheim_Build_CameraPlugin.Toggle.On) return;
-            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, s);
-            Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogInfo(s);
-        }
+	public static class Utils
+	{
+		private const float ComfortRefreshInterval = 0.2f;
+		private static readonly Collider[] NearbyPickupColliders = new Collider[128];
+		private static readonly HashSet<int> NearbyPickupItemIds = new();
+		private static readonly Dictionary<string, CraftingStation> CameraStationsByName = new();
+		private static readonly int TerrainMask = LayerMask.GetMask("terrain");
+		private static CraftingStation? _cameraStation;
+		private static Vector3 _lastSafeCameraPosition;
+		private static bool _hasLastSafeCameraPosition;
+		private static Player? _comfortPlayer;
+		private static bool _hasRequiredComfort;
+		private static float _nextComfortRefresh;
+		private static float _nextComfortMessageTime;
 
-        // Returns true when the player has Build Mode activated.
-        public static bool InBuildMode()
-        {
-            return (bool)Player.m_localPlayer && Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer];
-        }
+		internal static void LogWhenVerbose(string message)
+		{
+			if (Valheim_Build_CameraPlugin.verboseLogging.Value != Valheim_Build_CameraPlugin.Toggle.On) return;
+			Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, message);
+			Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogInfo(message);
+		}
 
-        internal static void DisableBuildMode()
-        {
-            Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer] = false;
-        }
+		public static bool InBuildMode()
+		{
+			return Player.m_localPlayer && Valheim_Build_CameraPlugin.BuildCameraActive;
+		}
 
-        internal static void EnableBuildMode()
-        {
-            Valheim_Build_CameraPlugin.inBuildMode[Player.m_localPlayer] = true;
+		internal static void DisableBuildMode()
+		{
+			Valheim_Build_CameraPlugin.BuildCameraActive = false;
+			_cameraStation = null;
+			CameraStationsByName.Clear();
+			_hasLastSafeCameraPosition = false;
+			_comfortPlayer = null;
+			_hasRequiredComfort = false;
+			_nextComfortRefresh = 0f;
+			_nextComfortMessageTime = 0f;
+			DvergrCircletCameraLight.Cleanup();
+			SE_DemisterCameraPatch.Cleanup();
+		}
 
-            // When entering build mode, we reset the view direction of the build
-            // camera, so that it matches the player's current direction. Thus, when
-            // entering build mode, there is no (abrupt) change to the camera.
-            var r = Player.m_localPlayer.m_eye.transform.rotation;
-            Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch = r.eulerAngles.x;
-            Valheim_Build_CameraPlugin.buildCameraViewDirection.yaw = r.eulerAngles.y;
+		internal static void EnableBuildMode()
+		{
+			if (!Player.m_localPlayer || !TryFindCameraStation(Player.m_localPlayer.transform.position, out _cameraStation)) return;
+			Valheim_Build_CameraPlugin.BuildCameraActive = true;
+			Quaternion rotation = Player.m_localPlayer.m_eye.transform.rotation;
+			Valheim_Build_CameraPlugin.CameraPitch = rotation.eulerAngles.x;
+			Valheim_Build_CameraPlugin.CameraYaw = rotation.eulerAngles.y;
+			if (GameCamera.instance)
+			{
+				_lastSafeCameraPosition = GameCamera.instance.transform.position;
+				_hasLastSafeCameraPosition = true;
+			}
 
-            Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Entering Build Mode.");
-        }
+			Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Entering Build Mode.");
+		}
 
-        /// <summary>
-        /// Returns true when player is the local player.
-        /// </summary>
-        /// <param name="player"></param>
-        /// <returns></returns>
-        internal static bool IsLocalPlayer(in Player player)
-        {
-            return (bool)Player.m_localPlayer && player == Player.m_localPlayer;
-        }
+		internal static bool IsLocalPlayer(in Player player)
+		{
+			return Player.m_localPlayer && player == Player.m_localPlayer;
+		}
 
-        /// <summary>
-        /// Returns true when the item is a Build Camera-compatible tool such as hammer.
-        /// </summary>
-        /// <param name="itemData"></param>
-        /// <returns></returns>
-        static bool IsTool(in ItemDrop.ItemData itemData)
-        {
-            return itemData?.m_shared.m_buildPieces;
-        }
+		private static bool IsTool(in ItemDrop.ItemData itemData)
+		{
+			return itemData?.m_shared.m_buildPieces;
+		}
 
-        /// <summary>
-        /// Returns true when this player has a Build Camera-compatible tool such as
-        /// hammer equipped.
-        /// </summary>
-        /// <param name="player"></param>
-        /// <returns></returns>
-        internal static bool ToolIsEquipped(in Player player)
-        {
-            // Tools are always equipped in the right hand.
-            return IsTool(player.m_rightItem);
-        }
+		internal static bool ToolIsEquipped(in Player player)
+		{
+			return IsTool(player.m_rightItem);
+		}
 
-        /// <summary>
-        /// Returns true when build mode should be deactivated: the hammer is
-        /// unequipped.
-        /// </summary>
-        /// <param name="player"></param>
-        /// <returns></returns>
-        internal static bool ShouldDeactivateBuildMode(in Player player)
-        {
-            return !ToolIsEquipped(player);
-        }
+		internal static bool ShouldDeactivateBuildMode(in Player player)
+		{
+			return !ToolIsEquipped(player);
+		}
 
-        /// <summary>
-        /// Returns the NearestBuildStation. It can be a workbench or a stone cutting bench.
-        /// </summary>
-        /// <param name="playerOrCamera"></param>
-        /// <returns></returns>
-        static Valheim_Build_CameraPlugin.NearbyCraftingStation? GetNearestBuildStation(in Vector3 playerOrCamera)
-        {
-            if (CraftingStation.m_allStations.Count == 0)
-            {
-                return null;
-            }
+		internal static bool BuildStationInRange(in Player player)
+		{
+			return TryFindCameraStation(player.transform.position, out _);
+		}
 
-            List<Valheim_Build_CameraPlugin.NearbyCraftingStation> nearbyCraftingStations = new();
-            foreach (CraftingStation station in CraftingStation.m_allStations)
-            {
-                nearbyCraftingStations.Add(new Valheim_Build_CameraPlugin.NearbyCraftingStation
-                {
-                    position = station.transform.position,
-                    distance = Vector3.Distance(station.transform.position, playerOrCamera),
-                    rangeBuild = station.m_rangeBuild
-                });
-            }
+		private static bool TryFindCameraStation(Vector3 point, out CraftingStation? station)
+		{
+			station = null;
+			float nearestDistanceSquared = float.MaxValue;
+			foreach (CraftingStation candidate in CraftingStation.m_allStations)
+			{
+				if (!candidate) continue;
+				float distanceSquared = HorizontalDistanceSquared(candidate.transform.position, point);
+				float range = GetCameraStationRange(candidate);
+				if (distanceSquared <= range * range && distanceSquared < nearestDistanceSquared)
+				{
+					station = candidate;
+					nearestDistanceSquared = distanceSquared;
+				}
+			}
 
-            return nearbyCraftingStations.OrderBy(x => x.distance).First();
-        }
+			return station;
+		}
 
-        /// <summary>
-        /// Returns true when a build/craft station is within range.
-        ///
-        /// Note that range is determined by the specific build/craft station. The
-        /// range is *not* multiplied by cameraRangeMultiplier. That is, we expect
-        /// the player to enter build mode while within the build range of a
-        /// crafting station. The camera may stray outside of the building range,
-        /// but all pieces will (presumably) be placed within build range.
-        /// </summary>
-        /// <param name="player"></param>
-        /// <returns></returns>
-        internal static bool BuildStationInRange(in Player player)
-        {
-            var maybeStation = GetNearestBuildStation(player.transform.position);
-            if (maybeStation is Valheim_Build_CameraPlugin.NearbyCraftingStation nearbyCraftingStation)
-            {
-                return nearbyCraftingStation.distance <= nearbyCraftingStation.rangeBuild;
-            }
+		internal static CraftingStation? FindCameraStation(string name, Vector3 point)
+		{
+			if (CameraStationsByName.TryGetValue(name, out CraftingStation cachedStation) && IsCameraStationInRange(cachedStation, name, point))
+				return cachedStation;
 
-            return false;
-        }
+			CraftingStation? closest = null;
+			float nearestDistanceSquared = float.MaxValue;
+			foreach (CraftingStation station in CraftingStation.m_allStations)
+			{
+				if (!station || station.m_name != name) continue;
+				float distanceSquared = HorizontalDistanceSquared(station.transform.position, point);
+				float range = GetCameraStationRange(station);
+				if (distanceSquared < range * range && distanceSquared < nearestDistanceSquared)
+				{
+					closest = station;
+					nearestDistanceSquared = distanceSquared;
+				}
+			}
 
-        /// <summary>
-        /// Prevents the game camera from going out of range of the nearest build
-        /// station (multiplied by the cameraRangeMultiplier).
-        /// </summary>
-        /// <param name="__instance"></param>
-        static void StayNearWorkbench(ref GameCamera __instance)
-        {
-            var maybeStation = GetNearestBuildStation(__instance.transform.position);
-            if (maybeStation is Valheim_Build_CameraPlugin.NearbyCraftingStation nearbyCraftingStation)
-            {
-                if (nearbyCraftingStation.distance > nearbyCraftingStation.rangeBuild * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value)
-                {
-                    float error = nearbyCraftingStation.distance - nearbyCraftingStation.rangeBuild * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value;
-                    Vector3 towardStation = nearbyCraftingStation.position - __instance.transform.position;
-                    Vector3 correction = error * towardStation.normalized;
-                    __instance.transform.position = __instance.transform.position + correction;
-                }
-            }
-            else
-            {
-                DisableBuildMode();
-            }
-        }
+			if (closest) CameraStationsByName[name] = closest;
+			else CameraStationsByName.Remove(name);
+			return closest;
+		}
 
-        /// <summary>
-        /// Prevents the game camera from going below ground.
-        /// </summary>
-        /// <param name="__instance"></param>
-        static void StayAboveGround(ref GameCamera __instance)
-        {
-            if (ZoneSystem.instance.GetGroundHeight(__instance.transform.position, out float height))
-            {
-                if (__instance.transform.position.y < height)
-                {
-                    Vector3 p = __instance.transform.position;
-                    p.y = height;
-                    __instance.transform.position = p;
-                }
-            }
-        }
+		private static bool IsCameraStationInRange(CraftingStation station, string name, Vector3 point)
+		{
+			if (!station || station.m_name != name) return false;
+			float range = GetCameraStationRange(station);
+			return HorizontalDistanceSquared(station.transform.position, point) < range * range;
+		}
 
-        /// <summary>
-        /// Updates buildCameraViewDirection (based on mouse and controller
-        /// movement) and returns the pitch and yaw as a quanternion.
-        /// </summary>
-        /// <param name="dt"></param>
-        /// <returns></returns>
-        static Quaternion UpdateBuildCameraViewDirection(float dt)
-        {
-            // Game source: GameCamera.UpdateFreeFly(float dt)
-            float mouseHorizontalPolarity = Valheim_Build_CameraPlugin.invertMouseLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
-            float controllerHorizontalPolarity = Valheim_Build_CameraPlugin.invertControllerLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
-            Valheim_Build_CameraPlugin.buildCameraViewDirection.yaw +=
-                mouseHorizontalPolarity * (PlayerController.m_mouseSens * Input.GetAxis("Mouse X"))
-                + (controllerHorizontalPolarity * ZInput.GetJoyRightStickX() * 110f * dt);
+		private static float GetCameraStationRange(CraftingStation station)
+		{
+			return Mathf.Max(station.GetStationBuildRange(), Valheim_Build_CameraPlugin.distanceCanBuildFromWorkbench.Value);
+		}
 
-            float mousePolarity = PlayerController.m_invertMouse ? -1 : 1;
-            float mouseVerticalPolarity = Valheim_Build_CameraPlugin.invertMouseLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -mousePolarity : mousePolarity;
-            float controllerVerticalPolarity = Valheim_Build_CameraPlugin.invertControllerLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
-            float pitchUnchecked =
-                Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch -
-                (mouseVerticalPolarity * (PlayerController.m_mouseSens * Input.GetAxis("Mouse Y"))
-                 - (controllerVerticalPolarity * ZInput.GetJoyRightStickY() * 110f * dt));
-            Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch = Mathf.Clamp(pitchUnchecked, -89f, 89f);
+		private static float HorizontalDistanceSquared(Vector3 first, Vector3 second)
+		{
+			float x = first.x - second.x;
+			float z = first.z - second.z;
+			return x * x + z * z;
+		}
 
-            return
-                Quaternion.Euler(0f, Valheim_Build_CameraPlugin.buildCameraViewDirection.yaw, 0f) *
-                Quaternion.Euler(Valheim_Build_CameraPlugin.buildCameraViewDirection.pitch, 0f, 0f);
-        }
+		private static Vector3 ClampToStationRange(Vector3 position)
+		{
+			if (!_cameraStation)
+			{
+				DisableBuildMode();
+				return position;
+			}
 
-        /// <summary>
-        /// Returns the untransformed (i.e. unaffected by current camera view
-        /// direction) vector by which the GameCamera should move (i.e. pan).
-        ///
-        /// Movement is based on keyboard (and controller) input.
-        /// </summary>
-        /// <returns></returns>
-        static Vector3 UntransformedMovementVector(float dt)
-        {
-            // Game source: GameCamera.UpdateFreeFly(float dt)
-            Vector3 vector = Vector3.zero;
+			Vector3 stationPosition = _cameraStation.transform.position;
+			float limit = GetCameraStationRange(_cameraStation) * Valheim_Build_CameraPlugin.cameraRangeMultiplier.Value;
+			Vector3 offset = position - stationPosition;
+			float distanceSquared = offset.sqrMagnitude;
+			return distanceSquared <= limit * limit ? position : stationPosition + offset * (limit / Mathf.Sqrt(distanceSquared));
+		}
 
-            if (ZInput.GetButton("Left"))
-            {
-                vector -= Vector3.right;
-            }
+		private static Vector3 ClampToTerrain(Vector3 currentPosition, Vector3 wantedPosition)
+		{
+			float clearance = Valheim_Build_CameraPlugin.cameraTerrainClearance.Value;
+			Vector3 movement = wantedPosition - currentPosition;
+			float distanceSquared = movement.sqrMagnitude;
+			if (distanceSquared <= 0.000001f) return currentPosition;
 
-            if (ZInput.GetButton("Right"))
-            {
-                vector += Vector3.right;
-            }
+			float distance = Mathf.Sqrt(distanceSquared);
+			Vector3 direction = movement / distance;
+			if (Physics.SphereCast(currentPosition, clearance, direction, out RaycastHit hit, distance, TerrainMask, QueryTriggerInteraction.Ignore))
+				wantedPosition = currentPosition + direction * Mathf.Max(0f, hit.distance - 0.02f);
 
-            if (ZInput.GetButton("Forward"))
-            {
-                vector += Vector3.forward;
-            }
+			if (Physics.CheckSphere(wantedPosition, clearance, TerrainMask, QueryTriggerInteraction.Ignore))
+			{
+				if (_hasLastSafeCameraPosition && !Physics.CheckSphere(_lastSafeCameraPosition, clearance, TerrainMask, QueryTriggerInteraction.Ignore))
+					return _lastSafeCameraPosition;
+				return currentPosition;
+			}
 
-            if (ZInput.GetButton("Backward"))
-            {
-                vector -= Vector3.forward;
-            }
+			_lastSafeCameraPosition = wantedPosition;
+			_hasLastSafeCameraPosition = true;
+			return wantedPosition;
+		}
 
-            Character.takeInputDelay = Mathf.Max(0.0f, Character.takeInputDelay - dt);
-            if (ZInput.GetButton("Jump") || ZInput.GetButton("JoyJump") && Character.takeInputDelay <= 0.0 && !Hud.IsPieceSelectionVisible())
-            {
-                vector += Vector3.up;
-            }
+		private static Quaternion UpdateBuildCameraViewDirection(float dt)
+		{
+			float mouseHorizontalPolarity = Valheim_Build_CameraPlugin.invertMouseLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
+			float controllerHorizontalPolarity = Valheim_Build_CameraPlugin.invertControllerLookHorizontal.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
+			Valheim_Build_CameraPlugin.CameraYaw += mouseHorizontalPolarity * PlayerController.m_mouseSens * Input.GetAxis("Mouse X") + controllerHorizontalPolarity * ZInput.GetJoyRightStickX() * 110f * dt;
 
-            if (ZInput.GetButton("Crouch") || ZInput.GetButtonPressedTimer("JoyCrouch") > 0.33000001311302185)
-            {
-                vector -= Vector3.up;
-            }
+			float vanillaMousePolarity = PlayerController.m_invertMouse ? -1f : 1f;
+			float mouseVerticalPolarity = Valheim_Build_CameraPlugin.invertMouseLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -vanillaMousePolarity : vanillaMousePolarity;
+			float controllerVerticalPolarity = Valheim_Build_CameraPlugin.invertControllerLookVertical.Value == Valheim_Build_CameraPlugin.Toggle.On ? -1f : 1f;
+			float pitch = Valheim_Build_CameraPlugin.CameraPitch - (mouseVerticalPolarity * PlayerController.m_mouseSens * Input.GetAxis("Mouse Y") - controllerVerticalPolarity * ZInput.GetJoyRightStickY() * 110f * dt);
+			Valheim_Build_CameraPlugin.CameraPitch = Mathf.Clamp(pitch, -89f, 89f);
+			return Quaternion.Euler(0f, Valheim_Build_CameraPlugin.CameraYaw, 0f) * Quaternion.Euler(Valheim_Build_CameraPlugin.CameraPitch, 0f, 0f);
+		}
 
-            // I'm not sure if this is correct, but I'm going to normalize before
-            // accounting for analog (joystick) movements. I would *not* want to
-            // normalize after accounting for analog movement, because that would ruin
-            // the whole point of having an analog input.
-            vector.Normalize();
+		private static Vector3 GetMovementInput(float dt)
+		{
+			Vector3 movement = Vector3.zero;
+			if (ZInput.GetButton("Left")) movement -= Vector3.right;
+			if (ZInput.GetButton("Right")) movement += Vector3.right;
+			if (ZInput.GetButton("Forward")) movement += Vector3.forward;
+			if (ZInput.GetButton("Backward")) movement -= Vector3.forward;
 
-            vector += Vector3.right * ZInput.GetJoyLeftStickX();
-            vector += -Vector3.forward * ZInput.GetJoyLeftStickY();
+			Character.takeInputDelay = Mathf.Max(0f, Character.takeInputDelay - dt);
+			if (ZInput.GetButton("Jump") || ZInput.GetButton("JoyJump") && Character.takeInputDelay <= 0f && !Hud.IsPieceSelectionVisible())
+				movement += Vector3.up;
+			if (ZInput.GetButton("Crouch") || ZInput.GetButtonPressedTimer("JoyCrouch") > 0.33f)
+				movement -= Vector3.up;
 
-            float baseSpeed =
-                ZInput.GetButton("Run") ? Player.m_localPlayer.m_runSpeed : Player.m_localPlayer.m_walkSpeed;
+			movement.Normalize();
+			movement += Vector3.right * ZInput.GetJoyLeftStickX();
+			movement -= Vector3.forward * ZInput.GetJoyLeftStickY();
+			float baseSpeed = ZInput.GetButton("Run") ? Player.m_localPlayer.m_runSpeed : Player.m_localPlayer.m_walkSpeed;
+			return movement * (dt * baseSpeed * Valheim_Build_CameraPlugin.cameraMoveSpeedMultiplier.Value);
+		}
 
-            // When I use m_walkSpeed to move the build camera, it moves very slow,
-            // much slower than the avatar's walking speed. m_walkSpeed is used in
-            // Character.UpdateWalking, but that function is so dense, I don't
-            // understand why the avatar walks faster. So we speed up the build
-            // camera's movement by cameraMoveSpeedMultiplier.
-            return vector * (dt * baseSpeed * Valheim_Build_CameraPlugin.cameraMoveSpeedMultiplier.Value);
-        }
+		internal static void UpdateBuildCamera(float dt, GameCamera camera)
+		{
+			if (Console.IsVisible() || !Player.m_localPlayer.TakeInput() || Hud.IsPieceSelectionVisible()) return;
+			Vector3 movement = GetMovementInput(dt);
+			Transform cameraTransform = camera.transform;
+			if (Valheim_Build_CameraPlugin.moveWithRespectToWorld.Value != Valheim_Build_CameraPlugin.Toggle.On)
+				movement = cameraTransform.TransformVector(movement);
+			Vector3 wantedPosition = ClampToStationRange(cameraTransform.position + movement);
+			cameraTransform.position = ClampToTerrain(cameraTransform.position, wantedPosition);
+			cameraTransform.rotation = UpdateBuildCameraViewDirection(dt);
+		}
 
-        /// <summary>
-        /// Pans and rotates the camera based on user input (e.g. mouse movement and WASD).
-        ///
-        /// Assumes that Build Mode is activated.
-        /// </summary>
-        /// <param name="dt"></param>
-        /// <param name="__instance"></param>
-        internal static void UpdateBuildCamera(float dt, ref GameCamera __instance)
-        {
-            // Game source: GameCamera.UpdateFreeFly(float dt)
-            if (!Console.IsVisible() && Player.m_localPlayer.TakeInput() && !Hud.IsPieceSelectionVisible())
-            {
-                var untransformed = UntransformedMovementVector(dt);
-                Vector3 moveBy = Valheim_Build_CameraPlugin.moveWithRespectToWorld.Value == Valheim_Build_CameraPlugin.Toggle.On ? untransformed : __instance.transform.TransformVector(untransformed);
+		private static bool HasRequiredComfort()
+		{
+			Player player = Player.m_localPlayer;
+			if (!player) return false;
+			if (player == _comfortPlayer && Time.time < _nextComfortRefresh) return _hasRequiredComfort;
 
-                __instance.transform.position += moveBy;
-                StayNearWorkbench(ref __instance);
-                StayAboveGround(ref __instance);
+			_comfortPlayer = player;
+			_nextComfortRefresh = Time.time + ComfortRefreshInterval;
+			_hasRequiredComfort = CalculateComfort(player);
+			return _hasRequiredComfort;
+		}
 
-                __instance.transform.rotation = UpdateBuildCameraViewDirection(dt);
-            }
-        }
+		private static bool CalculateComfort(Player player)
+		{
+			if (player.GetComfortLevel() < Valheim_Build_CameraPlugin.minimumComfortLevel.Value) return false;
+			SEMan statusEffects = player.GetSEMan();
+			if (statusEffects == null) return false;
+			if (statusEffects.HaveStatusEffect(SEMan.s_statusEffectResting)) return true;
 
-        public static void AutoPickup(float dt, ref GameCamera __instance)
-        {
-            if (Player.m_localPlayer.IsTeleporting() || !Player.m_enableAutoPickup || Player.m_localPlayer == null)
-                return;
-            Vector3 b = __instance.transform.position + Vector3.up;
-            foreach (Collider collider in Physics.OverlapSphere(b, Valheim_Build_CameraPlugin.resourcePickupRange.Value, Player.m_localPlayer.m_autoPickupMask))
-            {
-                if (collider.attachedRigidbody)
-                {
-                    ItemDrop component = collider.attachedRigidbody.GetComponent<ItemDrop>();
-                    FloatingTerrainDummy floatingTerrainDummy = null;
-                    if (component == null && (floatingTerrainDummy = collider.attachedRigidbody.gameObject.GetComponent<FloatingTerrainDummy>()) && floatingTerrainDummy)
-                        component = floatingTerrainDummy.m_parent.gameObject.GetComponent<ItemDrop>();
-                    if (component != null && component.m_autoPickup && !Player.m_localPlayer.HaveUniqueKey(component.m_itemData.m_shared.m_name) && component.GetComponent<ZNetView>().IsValid())
-                    {
-                        if (!component.CanPickup())
-                            component.RequestOwn();
-                        else if (!component.InTar())
-                        {
-                            component.Load();
-                            if (Player.m_localPlayer.m_inventory.CanAddItem(component.m_itemData) && component.m_itemData.GetWeight() + (double)Player.m_localPlayer.m_inventory.GetTotalWeight() <= (double)Player.m_localPlayer.GetMaxCarryWeight())
-                            {
-                                float num = Vector3.Distance(component.transform.position, b);
-                                if (num <= (double)Valheim_Build_CameraPlugin.resourcePickupRange.Value)
-                                {
-                                    if (num < Valheim_Build_CameraPlugin.resourcePickupRange.Value)
-                                    {
-                                        Player.m_localPlayer.Pickup(component.gameObject);
-                                    }
-                                    else
-                                    {
-                                        Vector3 vector3 = Vector3.Normalize(b - component.transform.position) * 15f * dt;
-                                        component.transform.position += vector3;
-                                        if (floatingTerrainDummy)
-                                            floatingTerrainDummy.transform.position += vector3;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+			bool nearFire = statusEffects.HaveStatusEffect(SEMan.s_statusEffectCampFire);
+			bool shelteredOrSitting = player.InShelter() || player.IsSitting();
+			bool insideWarmArea = EffectArea.IsPointInsideArea(player.transform.position, EffectArea.Type.WarmCozyArea, 1f);
+			bool wet = statusEffects.HaveStatusEffect(SEMan.s_statusEffectWet) && !insideWarmArea;
+			bool cold = statusEffects.HaveStatusEffect(SEMan.s_statusEffectCold) || statusEffects.HaveStatusEffect(SEMan.s_statusEffectFreezing);
+			return nearFire && shelteredOrSitting && !player.IsSensed() && !wet && !cold && !statusEffects.HaveStatusEffect(SEMan.s_statusEffectBurning);
+		}
+
+		internal static bool CanUseCamera()
+		{
+			return Valheim_Build_CameraPlugin.restrictionMode.Value != Valheim_Build_CameraPlugin.RestrictionMode.CameraNeedsCoziness || HasRequiredComfort();
+		}
+
+		internal static bool CanPickUpFromCamera()
+		{
+			return Valheim_Build_CameraPlugin.restrictionMode.Value != Valheim_Build_CameraPlugin.RestrictionMode.CameraPickUpNeedsCoziness || HasRequiredComfort();
+		}
+
+		internal static void ShowComfortMessage()
+		{
+			if (!Player.m_localPlayer || Time.time < _nextComfortMessageTime) return;
+			_nextComfortMessageTime = Time.time + 1.5f;
+			string text = Localization.instance.Localize("$buildcamera_needs_cozy", Valheim_Build_CameraPlugin.minimumComfortLevel.Value.ToString());
+			Player.m_localPlayer.Message(MessageHud.MessageType.Center, text);
+		}
+
+		internal static bool ShouldShowPickupWarning()
+		{
+			return InBuildMode() && !CanPickUpFromCamera() && HasNearbyPickup();
+		}
+
+		private static bool HasNearbyPickup()
+		{
+			if (!GameCamera.instance || !Player.m_localPlayer) return false;
+			Vector3 pickupCenter = GameCamera.instance.transform.position + Vector3.up;
+			int count = Physics.OverlapSphereNonAlloc(pickupCenter, Valheim_Build_CameraPlugin.resourcePickupRange.Value, NearbyPickupColliders, Player.m_localPlayer.m_autoPickupMask);
+			try
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					if (TryFindItemDrop(NearbyPickupColliders[i], out ItemDrop item) && item.m_autoPickup && !item.IsPiece())
+						return true;
+				}
+
+				return false;
+			}
+			finally
+			{
+				Array.Clear(NearbyPickupColliders, 0, count);
+			}
+		}
+
+		internal static bool TryGetAutoPickupPlayer(out Player player)
+		{
+			player = Player.m_localPlayer;
+			return player && !player.IsTeleporting() && Player.m_enableAutoPickup && CanPickUpFromCamera();
+		}
+
+		internal static void AutoPickup(GameCamera camera, Player player)
+		{
+			Vector3 pickupCenter = camera.transform.position + Vector3.up;
+			int count = Physics.OverlapSphereNonAlloc(pickupCenter, Valheim_Build_CameraPlugin.resourcePickupRange.Value, NearbyPickupColliders, player.m_autoPickupMask);
+			NearbyPickupItemIds.Clear();
+			try
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					if (!TryFindItemDrop(NearbyPickupColliders[i], out ItemDrop item) || !item.m_autoPickup || item.IsPiece() || player.HaveUniqueKey(item.m_itemData.m_shared.m_name)) continue;
+					if (!NearbyPickupItemIds.Add(item.GetInstanceID())) continue;
+					ZNetView netView = item.m_nview;
+					if (!netView || !netView.IsValid()) continue;
+					if (!item.CanPickup())
+					{
+						item.RequestOwn();
+						continue;
+					}
+
+					if (item.InTar()) continue;
+					item.Load();
+					if (!player.m_inventory.CanAddItem(item.m_itemData) || item.m_itemData.GetWeight() + player.m_inventory.GetTotalWeight() > player.GetMaxCarryWeight()) continue;
+					player.Pickup(item.gameObject);
+				}
+			}
+			finally
+			{
+				Array.Clear(NearbyPickupColliders, 0, count);
+				NearbyPickupItemIds.Clear();
+			}
+		}
+
+		private static bool TryFindItemDrop(Collider collider, out ItemDrop item)
+		{
+			item = null!;
+			if (!collider || !collider.attachedRigidbody) return false;
+			Rigidbody rigidbody = collider.attachedRigidbody;
+			item = rigidbody.GetComponent<ItemDrop>();
+			if (item) return true;
+			FloatingTerrainDummy floatingTerrain = rigidbody.GetComponent<FloatingTerrainDummy>();
+			if (!floatingTerrain || !floatingTerrain.m_parent) return false;
+			item = floatingTerrain.m_parent.GetComponent<ItemDrop>();
+			return item;
+		}
+
+		internal static void AddLocalizations(Localization localization)
+		{
+			localization.AddWord("buildcamera_needs_cozy", "Be cozy to use Build Camera (requires comfort $1).");
+			localization.AddWord("buildcamera_pickup_blocked_title", "Build Camera Pickup");
+			localization.AddWord("buildcamera_pickup_blocked", "Get cozy before collecting items through the build camera.\nRequired comfort: $1");
+		}
+	}
 }
