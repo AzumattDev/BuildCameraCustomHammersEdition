@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.3.1
+* 1.0 update
 * 1.3.0
   * Build Camera range no longer expands workbench coverage or player-base protection, preventing it from suppressing
     raids. Still works the same.

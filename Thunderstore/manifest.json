@@ -1,6 +1,6 @@
 {
     "name": "Build_Camera_Custom_Hammers_Edition",
-    "version_number": "1.3.0",
+    "version_number": "1.3.1",
     "website_url": "https://github.com/AzumattDev/BuildCameraCustomHammersEdition",
     "description": "Adds a build camera to your vanilla and custom hammers. Build without climbing on things! Wisplight & Circlet follow the camera in build mode.",
     "dependencies": [
