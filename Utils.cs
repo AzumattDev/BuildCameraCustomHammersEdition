@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Reflection;
 using UnityEngine;
 
 namespace Valheim_Build_Camera
@@ -18,11 +20,52 @@ namespace Valheim_Build_Camera
 		private static bool _hasRequiredComfort;
 		private static float _nextComfortRefresh;
 		private static float _nextComfortMessageTime;
+		private static readonly Action<Character, MessageHud.MessageType, string>? MessageInvoker = BuildMessageInvoker();
+
+		// Character.Message gained a trailing optional parameter in Valheim 1.0, so bind it late instead of baking the old arity into the call site.
+		private static Action<Character, MessageHud.MessageType, string>? BuildMessageInvoker()
+		{
+			try
+			{
+				MethodInfo? method = typeof(Character).GetMethod(nameof(Character.Message), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+				if (method == null) return null;
+
+				ParameterInfo[] parameters = method.GetParameters();
+				if (parameters.Length < 2 || parameters[0].ParameterType != typeof(MessageHud.MessageType) || parameters[1].ParameterType != typeof(string)) return null;
+
+				ParameterExpression character = Expression.Parameter(typeof(Character), "character");
+				ParameterExpression type = Expression.Parameter(typeof(MessageHud.MessageType), "type");
+				ParameterExpression text = Expression.Parameter(typeof(string), "text");
+
+				Expression[] arguments = new Expression[parameters.Length];
+				arguments[0] = type;
+				arguments[1] = text;
+				for (int i = 2; i < parameters.Length; ++i)
+				{
+					ParameterInfo parameter = parameters[i];
+					object? defaultValue = parameter.HasDefaultValue ? parameter.DefaultValue : null;
+					if (defaultValue == null && parameter.ParameterType.IsValueType) defaultValue = Activator.CreateInstance(parameter.ParameterType);
+					arguments[i] = Expression.Constant(defaultValue, parameter.ParameterType);
+				}
+
+				return Expression.Lambda<Action<Character, MessageHud.MessageType, string>>(Expression.Call(character, method, arguments), character, type, text).Compile();
+			}
+			catch (Exception exception)
+			{
+				Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogError($"Could not bind Character.Message, in-game messages are disabled: {exception.Message}");
+				return null;
+			}
+		}
+
+		internal static void ShowMessage(Character character, MessageHud.MessageType type, string text)
+		{
+			if (character) MessageInvoker?.Invoke(character, type, text);
+		}
 
 		internal static void LogWhenVerbose(string message)
 		{
 			if (Valheim_Build_CameraPlugin.verboseLogging.Value != Valheim_Build_CameraPlugin.Toggle.On) return;
-			Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, message);
+			ShowMessage(Player.m_localPlayer, MessageHud.MessageType.TopLeft, message);
 			Valheim_Build_CameraPlugin.BuildCameraCHELogger.LogInfo(message);
 		}
 
@@ -58,7 +101,7 @@ namespace Valheim_Build_Camera
 				_hasLastSafeCameraPosition = true;
 			}
 
-			Player.m_localPlayer.Message(MessageHud.MessageType.TopLeft, "Entering Build Mode.");
+			ShowMessage(Player.m_localPlayer, MessageHud.MessageType.TopLeft, "Entering Build Mode.");
 		}
 
 		internal static bool IsLocalPlayer(in Player player)
@@ -276,7 +319,7 @@ namespace Valheim_Build_Camera
 			if (!Player.m_localPlayer || Time.time < _nextComfortMessageTime) return;
 			_nextComfortMessageTime = Time.time + 1.5f;
 			string text = Localization.instance.Localize("$buildcamera_needs_cozy", Valheim_Build_CameraPlugin.minimumComfortLevel.Value.ToString());
-			Player.m_localPlayer.Message(MessageHud.MessageType.Center, text);
+			ShowMessage(Player.m_localPlayer, MessageHud.MessageType.Center, text);
 		}
 
 		internal static bool ShouldShowPickupWarning()

@@ -2,6 +2,12 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.3.2
+  * Fix the build camera doing nothing on Valheim 1.0. `Character.Message` gained a parameter, which made every hotkey
+    press throw `MissingMethodException` instead of toggling the camera.
+  * Message and HUD lookups are now resolved at runtime, so the same build keeps working across game updates that only
+    append optional parameters.
+  * Restore the pickup-blocked HUD panel styling against Valheim 1.0's new build UI.
 * 1.3.1
 * 1.0 update
 * 1.3.0
