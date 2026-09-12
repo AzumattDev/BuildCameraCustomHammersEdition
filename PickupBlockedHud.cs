@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,6 +24,8 @@ internal static class PickupBlockedHud
 	private static float _lastHudY = float.NaN;
 	private static int _lastComfortLevel = -1;
 	private static int _lastFontSize = -1;
+	private static FieldInfo? _buildUiField;
+	private static bool _buildUiFieldResolved;
 
 	internal static void Update()
 	{
@@ -56,7 +60,7 @@ internal static class PickupBlockedHud
 
 	internal static void Cleanup()
 	{
-		if (_panel) Object.Destroy(_panel);
+		if (_panel) UnityEngine.Object.Destroy(_panel);
 		_panel = null!;
 		_panelRect = null!;
 		_titleText = null!;
@@ -109,13 +113,7 @@ internal static class PickupBlockedHud
 
 	private static void ApplyPanelStyle(Image background, Hud hud)
 	{
-		Image source = null!;
-		if (hud.m_pieceSelectionWindow)
-		{
-			Transform panelBackground = hud.m_pieceSelectionWindow.transform.Find("Bkg2");
-			if (panelBackground) source = panelBackground.GetComponent<Image>();
-		}
-
+		Image source = FindStyleSource(hud);
 		if (source)
 		{
 			background.sprite = source.sprite;
@@ -126,6 +124,35 @@ internal static class PickupBlockedHud
 		}
 
 		background.color = new Color(0.06f, 0.055f, 0.045f, 0.92f);
+	}
+
+	private static Image FindStyleSource(Hud hud)
+	{
+		GameObject root = hud.m_pieceSelectionWindow;
+		if (!root) root = GetBuildUiRoot(hud);
+		if (!root) return null!;
+
+		Transform panelBackground = root.transform.Find("Bkg2");
+		if (panelBackground && panelBackground.GetComponent<Image>() is { } named) return named;
+
+		foreach (Image candidate in root.GetComponentsInChildren<Image>(true))
+		{
+			if (candidate.sprite && candidate.name.IndexOf("bkg", StringComparison.OrdinalIgnoreCase) >= 0) return candidate;
+		}
+
+		return null!;
+	}
+
+	// Valheim 1.0 replaced m_pieceSelectionWindow with m_buildUi; read it late so one build serves both versions.
+	private static GameObject GetBuildUiRoot(Hud hud)
+	{
+		if (!_buildUiFieldResolved)
+		{
+			_buildUiFieldResolved = true;
+			_buildUiField = typeof(Hud).GetField("m_buildUi", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+		}
+
+		return _buildUiField?.GetValue(hud) is Component buildUi && buildUi ? buildUi.gameObject : null!;
 	}
 
 	private static bool NeedsRefresh()
