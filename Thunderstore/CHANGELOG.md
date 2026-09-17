@@ -2,6 +2,8 @@
 
 <details><summary>Current Mod Changelogs</summary>
 
+* 1.3.3
+* Version bump, just in case Gale sees deprecated status
 * 1.3.2
 * Update for 1.0.14
 * 1.3.1
